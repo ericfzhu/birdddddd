@@ -188,7 +188,9 @@ export class GameModel {
       const origin = active.startX - this.distance;
       for (const feather of active.feathers) {
         const x = origin + feather.x;
-        if (!feather.missed && x > -12 && x < VIEW_WIDTH + 12) feathers.push({ x, y: feather.y, collected: feather.collected });
+        if (!feather.collected && x > -12 && x < VIEW_WIDTH + 12) {
+          feathers.push({ x, y: feather.y, collected: false });
+        }
       }
     }
     return feathers;

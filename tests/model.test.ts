@@ -146,6 +146,24 @@ describe("Impossible Aviary model", () => {
     expect(model.score).toBe(2);
   });
 
+  it("keeps missed feathers visible until they scroll offscreen", () => {
+    const model = new GameModel(17);
+    model.mode = "playing";
+    model.featherChain = 1;
+    const missedFeather = safeChunk([{ x: PLAYER_X - PLAYER_HEIGHT - 3, y: 40 }]);
+    model.chunks = [activate(missedFeather)];
+
+    model.step();
+
+    expect(model.chunks[0]?.feathers[0]?.missed).toBe(true);
+    expect(model.featherChain).toBe(0);
+    const stillVisible = model.visibleFeathers().find((feather) => feather.y === 40);
+    expect(stillVisible?.x).toBeLessThan(PLAYER_X);
+
+    model.distance = 100;
+    expect(model.visibleFeathers().some((feather) => feather.y === 40)).toBe(false);
+  });
+
   it("restarts only after the death delay", () => {
     const model = new GameModel(2);
     model.mode = "dead";
