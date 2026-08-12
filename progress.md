@@ -19,6 +19,7 @@ Original prompt: Implement the complete “Impossible Aviary — Gameplay and Ar
 - Replaced palette-only chapter swaps with four distinct environment systems: woven nursery nests, clockwork machinery, crooked framed galleries, and a starry suspended midnight coop. Chapter identity now affects backgrounds, boundary rails, and safe platform construction while preserving semantic hazard colours.
 - Added three authored, hazard-free, non-scoring transition passages. Background motifs and boundary construction crossfade according to the bird's physical position in each passage, and the next chapter announcement now appears on entry rather than at the distant score threshold.
 - Added a local `?previewChapter=0..3` visual-test route so each complete environment can be inspected directly without weakening normal progression.
+- Fixed missed-feather lifecycle: passing one still resets the three-feather chain immediately, but its sprite now continues scrolling until it naturally exits the left edge instead of popping out beside the bird.
 
 ## TODO
 
@@ -32,3 +33,4 @@ Original prompt: Implement the complete “Impossible Aviary — Gameplay and Ar
 - Required Playwright client: verified ready, live play, momentum reversal, pause/resume, mute, death, delayed restart, reproducible seed, state output, and console-error-free screenshots.
 - Yarn conversion verification: 9/9 tests pass, production build succeeds, Vite serves at `http://localhost:5173`, and the gameplay screenshot/state output still match.
 - Chapter environment verification: `yarn test` passes 10/10, the production build succeeds, direct screenshots confirm all four environments are visually distinct, and a live-input Playwright run remains console-error free.
+- Feather lifecycle verification: `yarn test` passes 11/11; a deterministic browser capture shows a missed feather still rendered at x=73 after passing the bird at x=90, with the chain reset and no console errors.
