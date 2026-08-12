@@ -44,7 +44,11 @@ export interface ChunkDefinition {
   solids: SolidSpec[];
   hazards: HazardSpec[];
   feathers: FeatherSpec[];
-  decoration: "nest" | "gears" | "bells" | "eggs";
+  decoration: "nest" | "gears" | "bells" | "eggs" | "passage";
+  transition?: {
+    from: number;
+    to: number;
+  };
 }
 
 export interface ActiveFeather extends FeatherSpec {
@@ -74,6 +78,16 @@ export interface VisibleRect extends RectSpec {
   kind: "solid" | HazardKind;
   detail?: string;
   flipY?: boolean;
+  chapter: number;
+  decoration: ChunkDefinition["decoration"];
+}
+
+export interface ChapterTransitionState {
+  id: string;
+  from: number;
+  to: number;
+  progress: number;
+  active: boolean;
 }
 
 export interface VisibleFeather {

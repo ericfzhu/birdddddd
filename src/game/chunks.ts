@@ -76,6 +76,21 @@ export const CHUNKS: readonly ChunkDefinition[] = [
   chunk("midnight-finale", 3, 280, [bottomThorns(46, 22, 23), topThorns(102, 22, 23), bottomThorns(160, 22, 23), topThorns(218, 22, 23)], featherArc([[64, 60], [120, 120], [178, 60], [236, 120]]), [], ANY, ANY, "eggs"),
 ] as const;
 
+export const TRANSITION_CHUNKS: readonly ChunkDefinition[] = [
+  chunk("passage-nursery-clockwork", 1, 190, [], [], [], ANY, ANY, "passage"),
+  chunk("passage-clockwork-crooked", 2, 190, [], [], [], ANY, ANY, "passage"),
+  chunk("passage-crooked-midnight", 3, 190, [], [], [], ANY, ANY, "passage"),
+].map((definition, index) => ({
+  ...definition,
+  transition: { from: index, to: index + 1 },
+}));
+
+export function transitionChunk(from: number, to: number): ChunkDefinition {
+  const definition = TRANSITION_CHUNKS.find((candidate) => candidate.transition?.from === from && candidate.transition.to === to);
+  if (!definition) throw new Error(`No transition passage from chapter ${from} to ${to}`);
+  return definition;
+}
+
 export function chunksForChapter(chapter: number): ChunkDefinition[] {
   return CHUNKS.filter((candidate) => candidate.chapter === chapter);
 }

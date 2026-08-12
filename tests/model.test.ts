@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { CHAPTERS, FIXED_STEP_SECONDS, FLIP_DEBOUNCE_SECONDS, PLAY_TOP, PLAYER_HEIGHT, PLAYER_X } from "../src/game/constants";
-import { CHUNKS, envelopesCompatible, validateChunkLibrary } from "../src/game/chunks";
+import { CHUNKS, TRANSITION_CHUNKS, envelopesCompatible, validateChunkLibrary } from "../src/game/chunks";
 import { GameModel } from "../src/game/model";
 import { canTraverseChunk } from "../src/game/solver";
 import type { ActiveChunk, ChunkDefinition } from "../src/game/types";
@@ -71,6 +71,33 @@ describe("Impossible Aviary model", () => {
     for (let chapter = 0; chapter < 4; chapter += 1) {
       expect(CHUNKS.filter((chunk) => chunk.chapter === chapter)).toHaveLength(6);
     }
+  });
+
+  it("inserts a safe non-scoring passage when a chapter threshold is crossed", () => {
+    const model = new GameModel(91);
+    model.mode = "playing";
+    model.gates = 9;
+    model.score = 9;
+    model.distance = 98;
+    model.chunks = [activate(safeChunk())];
+
+    model.step();
+
+    expect(model.chapter).toBe(1);
+    expect(model.gates).toBe(10);
+    const passage = model.chunks.find((active) => active.definition.transition);
+    expect(passage?.definition.id).toBe(TRANSITION_CHUNKS[0]?.id);
+    expect(model.chapterTransition()?.progress).toBe(0);
+
+    if (!passage) throw new Error("Expected a transition passage");
+    model.distance = passage.startX - PLAYER_X + passage.definition.width / 2;
+    expect(model.chapterTransition()).toMatchObject({ from: 0, to: 1, active: true });
+    expect(model.chapterTransition()?.progress).toBeCloseTo(0.5, 5);
+
+    model.distance = passage.startX - PLAYER_X + passage.definition.width + 1;
+    model.step();
+    expect(model.gates).toBe(10);
+    expect(model.score).toBe(10);
   });
 
   it("declares at least one compatible successor for every chunk", () => {

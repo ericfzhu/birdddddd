@@ -14,9 +14,10 @@ import {
   VIEW_WIDTH,
   chapterForGates,
 } from "./constants";
-import { chunksForChapter, envelopesCompatible } from "./chunks";
+import { chunksForChapter, envelopesCompatible, transitionChunk } from "./chunks";
 import type {
   ActiveChunk,
+  ChapterTransitionState,
   GameEvent,
   GameMode,
   HazardSpec,
@@ -50,11 +51,15 @@ export class GameModel {
   private rngState: number;
   private events: GameEvent[] = [];
   private lastChunkId = "";
+  private pendingTransition?: { from: number; to: number };
 
-  constructor(seed = 0x51a7e, bestScore = 0) {
+  constructor(seed = 0x51a7e, bestScore = 0, startingChapter = 0) {
     this.seed = seed >>> 0;
     this.rngState = this.seed;
     this.bestScore = bestScore;
+    this.chapter = clamp(Math.floor(startingChapter), 0, CHAPTERS.length - 1);
+    this.gates = CHAPTERS[this.chapter]?.at ?? 0;
+    this.score = this.gates;
     this.populateInitialChunks();
   }
 
@@ -76,6 +81,7 @@ export class GameModel {
     this.events = [];
     this.chunks = [];
     this.lastChunkId = "";
+    this.pendingTransition = undefined;
     this.populateInitialChunks();
   }
 
@@ -148,12 +154,28 @@ export class GameModel {
       const origin = active.startX - this.distance;
       for (const solid of active.definition.solids) {
         const x = origin + solid.x;
-        if (x < VIEW_WIDTH + 20 && x + solid.w > -20) rects.push({ ...solid, x, kind: "solid", detail: solid.detail });
+        if (x < VIEW_WIDTH + 20 && x + solid.w > -20) {
+          rects.push({
+            ...solid,
+            x,
+            kind: "solid",
+            detail: solid.detail,
+            chapter: active.definition.chapter,
+            decoration: active.definition.decoration,
+          });
+        }
       }
       for (const hazard of active.definition.hazards) {
         const x = origin + hazard.x;
         if (x < VIEW_WIDTH + 20 && x + hazard.w > -20) {
-          rects.push({ ...hazard, x, y: hazard.y + this.motionOffset(hazard), kind: hazard.kind });
+          rects.push({
+            ...hazard,
+            x,
+            y: hazard.y + this.motionOffset(hazard),
+            kind: hazard.kind,
+            chapter: active.definition.chapter,
+            decoration: active.definition.decoration,
+          });
         }
       }
     }
@@ -172,6 +194,20 @@ export class GameModel {
     return feathers;
   }
 
+  chapterTransition(): ChapterTransitionState | undefined {
+    const active = this.chunks.find((chunk) => chunk.definition.transition);
+    const transition = active?.definition.transition;
+    if (!active || !transition) return undefined;
+    const localX = this.distance + PLAYER_X - active.startX;
+    return {
+      id: active.definition.id,
+      from: transition.from,
+      to: transition.to,
+      progress: clamp(localX / active.definition.width, 0, 1),
+      active: localX >= 0 && localX <= active.definition.width,
+    };
+  }
+
   textSnapshot(): string {
     const visibleHazards = this.visibleRects().filter((rect) => rect.kind !== "solid").slice(0, 8);
     return JSON.stringify({
@@ -184,6 +220,7 @@ export class GameModel {
       featherChain: this.featherChain,
       chapter: CHAPTERS[this.chapter]?.name,
       speed: CHAPTERS[this.chapter]?.speed,
+      transition: this.chapterTransition(),
       restartReady: this.mode === "dead" && this.deathTimer >= RESTART_DELAY_SECONDS,
       hazards: visibleHazards.map(({ x, y, w, h, kind }) => ({ x: Math.round(x), y: Math.round(y), w, h, kind })),
       feathers: this.visibleFeathers().filter((item) => !item.collected).slice(0, 6).map((item) => ({ x: Math.round(item.x), y: item.y })),
@@ -291,12 +328,15 @@ export class GameModel {
       const gateX = active.startX + active.definition.width - 12 - this.distance;
       if (!active.gatePassed && gateX <= PLAYER_X) {
         active.gatePassed = true;
+        if (active.definition.transition) continue;
         this.gates += 1;
         this.score += 1;
         this.events.push({ type: "gate", score: this.score });
         const nextChapter = chapterForGates(this.gates);
         if (nextChapter !== this.chapter) {
+          const previousChapter = this.chapter;
           this.chapter = nextChapter;
+          this.pendingTransition = { from: previousChapter, to: nextChapter };
           this.pruneUnseenQueue();
           this.events.push({ type: "chapter", chapter: this.chapter });
         }
@@ -311,7 +351,10 @@ export class GameModel {
       : this.distance + VIEW_WIDTH;
     while (rightEdge - this.distance < VIEW_WIDTH + 360) {
       const previous = this.chunks.at(-1)?.definition;
-      const definition = this.chooseChunk(this.chapter, previous?.exit);
+      const definition = this.pendingTransition
+        ? transitionChunk(this.pendingTransition.from, this.pendingTransition.to)
+        : this.chooseChunk(this.chapter, previous?.exit);
+      this.pendingTransition = undefined;
       this.chunks.push({
         definition,
         startX: rightEdge,
@@ -331,7 +374,7 @@ export class GameModel {
     let startX = 240;
     for (let i = 0; i < 5; i += 1) {
       const previous = this.chunks.at(-1)?.definition;
-      const definition = this.chooseChunk(0, previous?.exit);
+      const definition = this.chooseChunk(this.chapter, previous?.exit);
       this.chunks.push({
         definition,
         startX,
