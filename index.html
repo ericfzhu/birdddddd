@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#17182b" />
+    <meta name="description" content="Impossible Aviary — a one-button gravity arcade game." />
+    <title>Impossible Aviary</title>
+  </head>
+  <body>
+    <main class="page-shell">
+      <section class="game-shell" aria-label="Impossible Aviary game">
+        <div id="game" aria-label="Game canvas"></div>
+      </section>
+      <p class="controls-hint"><kbd>Space</kbd> / tap to reverse gravity <span>·</span> <kbd>P</kbd> pause <span>·</span> <kbd>M</kbd> sound <span>·</span> <kbd>F</kbd> fullscreen</p>
+    </main>
+    <aside class="rotate-prompt" role="status" aria-live="polite">
+      <div class="rotate-bird" aria-hidden="true">↻</div>
+      <strong>Turn the aviary sideways</strong>
+      <span>This little bird needs a landscape.</span>
+    </aside>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
