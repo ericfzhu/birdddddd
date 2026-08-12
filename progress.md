@@ -16,6 +16,9 @@ Original prompt: Implement the complete “Impossible Aviary — Gameplay and Ar
 - Installed Node 24.19 through NVM and verified `yarn install --immutable`, `yarn test`, `yarn build`, and `yarn dev`; the Yarn-served browser playtest remained console-error free.
 - Reworked the outer screen frame into a square pixel-mechanical cage with cream rails, teal dash inlays, yolk fasteners, and stepped dark depth; removed the rounded corners from the shell, game host, and canvas.
 - Full-page visual inspection confirmed the square frame reads as part of the aviary; Yarn tests remain 9/9, the production build succeeds, and the deterministic browser playtest remains console-error free.
+- Replaced palette-only chapter swaps with four distinct environment systems: woven nursery nests, clockwork machinery, crooked framed galleries, and a starry suspended midnight coop. Chapter identity now affects backgrounds, boundary rails, and safe platform construction while preserving semantic hazard colours.
+- Added three authored, hazard-free, non-scoring transition passages. Background motifs and boundary construction crossfade according to the bird's physical position in each passage, and the next chapter announcement now appears on entry rather than at the distant score threshold.
+- Added a local `?previewChapter=0..3` visual-test route so each complete environment can be inspected directly without weakening normal progression.
 
 ## TODO
 
@@ -24,7 +27,8 @@ Original prompt: Implement the complete “Impossible Aviary — Gameplay and Ar
 
 ## Final verification
 
-- `yarn test`: 9/9 passing, including deterministic motion, scoring, restart timing, 24-chunk structure, compatibility metadata, and discrete traversal across moving-hazard phases.
+- `yarn test`: includes deterministic motion, scoring, restart timing, 24-chunk structure, compatibility metadata, authored chapter passages, and discrete traversal across moving-hazard phases.
 - `yarn build`: successful Vite production build.
 - Required Playwright client: verified ready, live play, momentum reversal, pause/resume, mute, death, delayed restart, reproducible seed, state output, and console-error-free screenshots.
 - Yarn conversion verification: 9/9 tests pass, production build succeeds, Vite serves at `http://localhost:5173`, and the gameplay screenshot/state output still match.
+- Chapter environment verification: `yarn test` passes 10/10, the production build succeeds, direct screenshots confirm all four environments are visually distinct, and a live-input Playwright run remains console-error free.
