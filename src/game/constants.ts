@@ -23,11 +23,54 @@ export const COLORS = {
   white: 0xfff9e9,
 } as const;
 
+export const BIOMES = [
+  {
+    sky: 0x6d9fbd,
+    far: 0x436d73,
+    terrain: 0x503522,
+    terrainDark: 0x30261f,
+    surface: 0x6fa545,
+    accent: 0xa9d35f,
+    danger: 0xb94b54,
+    glow: 0xf6d77a,
+  },
+  {
+    sky: 0xd99b5d,
+    far: 0xb56b43,
+    terrain: 0x8b5836,
+    terrainDark: 0x593b31,
+    surface: 0xe0b45f,
+    accent: 0xf4da91,
+    danger: 0x9e3f4e,
+    glow: 0xffe09b,
+  },
+  {
+    sky: 0x281b43,
+    far: 0x41285f,
+    terrain: 0x33243e,
+    terrainDark: 0x211a31,
+    surface: 0x8951ad,
+    accent: 0xd37be4,
+    danger: 0xf06fa7,
+    glow: 0xf3b6f0,
+  },
+  {
+    sky: 0x1b151d,
+    far: 0x3e1d25,
+    terrain: 0x2d272c,
+    terrainDark: 0x17151a,
+    surface: 0x74505a,
+    accent: 0xef663f,
+    danger: 0xff9c38,
+    glow: 0xffc65b,
+  },
+] as const;
+
 export const CHAPTERS = [
-  { id: 0, name: "NURSERY WORKS", speed: 80, at: 0, shade: 0x25304a },
-  { id: 1, name: "CLOCKWORK ROOST", speed: 88, at: 10, shade: 0x253b45 },
-  { id: 2, name: "CROOKED GALLERY", speed: 96, at: 25, shade: 0x332b49 },
-  { id: 3, name: "MIDNIGHT COOP", speed: 104, at: 45, shade: 0x20243d },
+  { id: 0, name: "VERDANT WILDS", speed: 80, at: 0, shade: BIOMES[0].sky },
+  { id: 1, name: "SUNKEN DUNES", speed: 88, at: 10, shade: BIOMES[1].sky },
+  { id: 2, name: "VIOLET CHASM", speed: 96, at: 25, shade: BIOMES[2].sky },
+  { id: 3, name: "ASHEN DEPTHS", speed: 104, at: 45, shade: BIOMES[3].sky },
 ] as const;
 
 export function chapterForGates(gates: number): number {

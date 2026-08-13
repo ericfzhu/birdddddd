@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CHAPTERS, FIXED_STEP_SECONDS, FLIP_DEBOUNCE_SECONDS, PLAY_TOP, PLAYER_HEIGHT, PLAYER_MIN_X, PLAYER_X } from "../src/game/constants";
+import { BIOMES, CHAPTERS, FIXED_STEP_SECONDS, FLIP_DEBOUNCE_SECONDS, PLAY_TOP, PLAYER_HEIGHT, PLAYER_MIN_X, PLAYER_X } from "../src/game/constants";
 import { CHUNKS, TRANSITION_CHUNKS, envelopesCompatible, tunnelOffsetAt, validateChunkLibrary } from "../src/game/chunks";
 import { GameModel } from "../src/game/model";
 import { canTraverseChunk } from "../src/game/solver";
@@ -15,7 +15,7 @@ const safeChunk = (feathers: Array<{ x: number; y: number }> = []): ChunkDefinit
   solids: [],
   hazards: [],
   feathers,
-  decoration: "nest",
+  decoration: "forest",
 });
 
 const activate = (definition: ChunkDefinition, startX = 0): ActiveChunk => ({
@@ -91,6 +91,15 @@ describe("birdddddd model", () => {
     expect(validateChunkLibrary()).toEqual([]);
     for (let chapter = 0; chapter < 4; chapter += 1) {
       expect(CHUNKS.filter((chunk) => chunk.chapter === chapter)).toHaveLength(6);
+    }
+  });
+
+  it("keeps each chapter tied to a distinct biome art family", () => {
+    expect(CHAPTERS.map((chapter) => chapter.name)).toEqual(["VERDANT WILDS", "SUNKEN DUNES", "VIOLET CHASM", "ASHEN DEPTHS"]);
+    expect(new Set(BIOMES.map((biome) => biome.sky)).size).toBe(4);
+    const decorations = ["forest", "desert", "blight", "depths"] as const;
+    for (let chapter = 0; chapter < decorations.length; chapter += 1) {
+      expect(new Set(CHUNKS.filter((chunk) => chunk.chapter === chapter).map((chunk) => chunk.decoration))).toEqual(new Set([decorations[chapter]]));
     }
   });
 

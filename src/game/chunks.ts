@@ -63,7 +63,7 @@ function chunk(
   solids: SolidSpec[] = [],
   entry: Envelope = ANY,
   exit: Envelope = ANY,
-  decoration: ChunkDefinition["decoration"] = "nest",
+  decoration: ChunkDefinition["decoration"] = "forest",
 ): ChunkDefinition {
   return { id, chapter, width, hazards, feathers, solids, entry, exit, decoration };
 }
@@ -90,7 +90,7 @@ const tunnelWave = (width: number, first: number, second: number): TunnelPoint[]
 const withTunnel = (definition: ChunkDefinition, tunnel: TunnelPoint[]): ChunkDefinition => ({ ...definition, tunnel });
 
 export const CHUNKS: readonly ChunkDefinition[] = [
-  // Nursery Works — wide, readable single decisions.
+  // Verdant Wilds — wide, readable single decisions.
   chunk("nursery-low", 0, 210, [floorBarbs(72, 34, 20)], [{ x: 90, y: 72 }]),
   chunk("nursery-high", 0, 210, [ceilingBarbs(76, 36, 20)], [{ x: 94, y: 110 }]),
   withTunnel(chunk("nursery-sway", 0, 230, [bottomThorns(58, 26), topThorns(152, 28)], featherArc([[76, 70], [116, 90], [164, 110]])), tunnelDip(230, 25)),
@@ -98,35 +98,35 @@ export const CHUNKS: readonly ChunkDefinition[] = [
   chunk("nursery-perch", 0, 230, [bottomThorns(146, 32)], [{ x: 92, y: 77 }], [perch(66, 105, 48)]),
   withTunnel(chunk("nursery-rungs", 0, 240, [ceilingBarbs(54, 24, 21), floorBarbs(138, 28, 21)], featherArc([[72, 112], [108, 90], [154, 68]])), tunnelDip(240, -25)),
 
-  // Clockwork Roost — alternating decisions and reward arcs.
-  chunk("clock-low-high", 1, 230, [floorBarbs(46, 32), ceilingBarbs(142, 34)], featherArc([[64, 62], [106, 90], [160, 118]]), [], BOTTOM, TOP, "gears"),
-  chunk("clock-high-low", 1, 230, [ceilingBarbs(48, 32), floorBarbs(144, 34)], featherArc([[64, 118], [108, 88], [162, 62]]), [], TOP, BOTTOM, "gears"),
-  chunk("clock-eye", 1, 220, [bottomThorns(168, 22)], [{ x: 106, y: 86 }], [cagePillar(102, PLAY_TOP, 55), cagePillar(102, 113, PLAY_BOTTOM - 113)], ANY, BOTTOM, "gears"),
-  withTunnel(chunk("clock-steps", 1, 250, [bottomThorns(50, 22), topThorns(116, 22), bottomThorns(186, 24)], featherArc([[66, 58], [132, 120], [202, 60]]), [], ANY, ANY, "bells"), tunnelDip(250, 31)),
-  chunk("clock-perches", 1, 240, [ceilingBarbs(170, 28), spinner(202, 104, 17)], featherArc([[78, 116], [118, 95], [174, 70]]), [perch(62, 120, 40), perch(116, 72, 42)], ANY, TOP, "bells"),
-  withTunnel(chunk("clock-teeth", 1, 240, [topThorns(66, 24, 21), bottomThorns(125, 24, 21), topThorns(184, 24, 21)], featherArc([[86, 116], [145, 64], [204, 116]]), [], ANY, ANY, "gears"), tunnelDip(240, -31)),
+  // Sunken Dunes — alternating decisions and reward arcs.
+  chunk("clock-low-high", 1, 230, [floorBarbs(46, 32), ceilingBarbs(142, 34)], featherArc([[64, 62], [106, 90], [160, 118]]), [], BOTTOM, TOP, "desert"),
+  chunk("clock-high-low", 1, 230, [ceilingBarbs(48, 32), floorBarbs(144, 34)], featherArc([[64, 118], [108, 88], [162, 62]]), [], TOP, BOTTOM, "desert"),
+  chunk("clock-eye", 1, 220, [bottomThorns(168, 22)], [{ x: 106, y: 86 }], [cagePillar(102, PLAY_TOP, 55), cagePillar(102, 113, PLAY_BOTTOM - 113)], ANY, BOTTOM, "desert"),
+  withTunnel(chunk("clock-steps", 1, 250, [bottomThorns(50, 22), topThorns(116, 22), bottomThorns(186, 24)], featherArc([[66, 58], [132, 120], [202, 60]]), [], ANY, ANY, "desert"), tunnelDip(250, 31)),
+  chunk("clock-perches", 1, 240, [ceilingBarbs(170, 28), spinner(202, 104, 17)], featherArc([[78, 116], [118, 95], [174, 70]]), [perch(62, 120, 40), perch(116, 72, 42)], ANY, TOP, "desert"),
+  withTunnel(chunk("clock-teeth", 1, 240, [topThorns(66, 24, 21), bottomThorns(125, 24, 21), topThorns(184, 24, 21)], featherArc([[86, 116], [145, 64], [204, 116]]), [], ANY, ANY, "desert"), tunnelDip(240, -31)),
 
-  // Crooked Gallery — moving shutters and delayed reversals.
-  chunk("crooked-shutter-a", 2, 240, [{ x: 106, y: 26, w: 10, h: 58, kind: "shutter", attachment: "floating", motion: { amplitude: 16, frequency: 0.35 } }, floorBarbs(178, 28)], [{ x: 110, y: 120 }], [], ANY, BOTTOM, "eggs"),
-  chunk("crooked-shutter-b", 2, 240, [{ x: 112, y: 96, w: 10, h: 58, kind: "shutter", attachment: "floating", motion: { amplitude: 15, frequency: 0.38, phase: 0.5 } }, ceilingBarbs(182, 28)], [{ x: 116, y: 58 }], [], ANY, TOP, "eggs"),
-  withTunnel(chunk("crooked-scissors", 2, 250, [topThorns(204, 24)], featherArc([[90, 100], [154, 78], [214, 118]]), [cagePillar(82, PLAY_TOP, 58), cagePillar(148, 106, PLAY_BOTTOM - 106)], ANY, ANY, "bells"), tunnelDip(250, 37)),
-  withTunnel(chunk("crooked-islands", 2, 250, [bottomThorns(58, 24), topThorns(190, 24)], featherArc([[92, 74], [128, 92], [172, 112]]), [perch(94, 116, 34), perch(144, 58, 34)], ANY, ANY, "eggs"), tunnelDip(250, -37)),
-  chunk("crooked-pendulum", 2, 260, [spinner(116, 80, 20, { amplitude: 28, frequency: 0.28, phase: 0.25 }), floorBarbs(204, 28)], featherArc([[72, 60], [150, 90], [218, 58]]), [], TOP, BOTTOM, "bells"),
-  chunk("crooked-comb", 2, 250, [topThorns(50, 20, 25), bottomThorns(104, 20, 25), topThorns(158, 20, 25), bottomThorns(212, 20, 25)], featherArc([[66, 116], [120, 62], [174, 116]]), [], ANY, ANY, "gears"),
+  // Violet Chasm — moving crystal columns and delayed reversals.
+  chunk("crooked-shutter-a", 2, 240, [{ x: 106, y: 26, w: 10, h: 58, kind: "shutter", attachment: "floating", motion: { amplitude: 16, frequency: 0.35 } }, floorBarbs(178, 28)], [{ x: 110, y: 120 }], [], ANY, BOTTOM, "blight"),
+  chunk("crooked-shutter-b", 2, 240, [{ x: 112, y: 96, w: 10, h: 58, kind: "shutter", attachment: "floating", motion: { amplitude: 15, frequency: 0.38, phase: 0.5 } }, ceilingBarbs(182, 28)], [{ x: 116, y: 58 }], [], ANY, TOP, "blight"),
+  withTunnel(chunk("crooked-scissors", 2, 250, [topThorns(204, 24)], featherArc([[90, 100], [154, 78], [214, 118]]), [cagePillar(82, PLAY_TOP, 58), cagePillar(148, 106, PLAY_BOTTOM - 106)], ANY, ANY, "blight"), tunnelDip(250, 37)),
+  withTunnel(chunk("crooked-islands", 2, 250, [bottomThorns(58, 24), topThorns(190, 24)], featherArc([[92, 74], [128, 92], [172, 112]]), [perch(94, 116, 34), perch(144, 58, 34)], ANY, ANY, "blight"), tunnelDip(250, -37)),
+  chunk("crooked-pendulum", 2, 260, [spinner(116, 80, 20, { amplitude: 28, frequency: 0.28, phase: 0.25 }), floorBarbs(204, 28)], featherArc([[72, 60], [150, 90], [218, 58]]), [], TOP, BOTTOM, "blight"),
+  chunk("crooked-comb", 2, 250, [topThorns(50, 20, 25), bottomThorns(104, 20, 25), topThorns(158, 20, 25), bottomThorns(212, 20, 25)], featherArc([[66, 116], [120, 62], [174, 116]]), [], ANY, ANY, "blight"),
 
-  // Midnight Coop — expert combinations, still solver-safe.
-  chunk("midnight-needle", 3, 250, [spinner(166, 63, 18)], featherArc([[84, 105], [152, 70], [218, 108]]), [cagePillar(74, PLAY_TOP, 62), cagePillar(142, 102, PLAY_BOTTOM - 102), cagePillar(208, PLAY_TOP, 60)], ANY, ANY, "eggs"),
-  chunk("midnight-crank", 3, 260, [{ x: 92, y: 28, w: 10, h: 54, kind: "shutter", attachment: "floating", motion: { amplitude: 18, frequency: 0.42 } }, spinner(181, 80, 20, { amplitude: 28, frequency: 0.36, phase: 0.5 })], featherArc([[106, 118], [150, 90], [212, 62]]), [], ANY, ANY, "gears"),
-  withTunnel(chunk("midnight-nests", 3, 270, [floorBarbs(54, 26), ceilingBarbs(214, 28)], featherArc([[90, 64], [142, 92], [204, 116]]), [perch(96, 116, 38), perch(156, 58, 38)], ANY, ANY, "nest"), tunnelDip(270, 43)),
-  chunk("midnight-beaks", 3, 260, [{ x: 66, y: PLAY_TOP, w: 20, h: 28, kind: "beak", flipY: true }, { x: 138, y: 136, w: 20, h: 28, kind: "beak" }, { x: 210, y: PLAY_TOP, w: 20, h: 28, kind: "beak", flipY: true }], featherArc([[84, 118], [156, 62], [226, 116]]), [], ANY, ANY, "nest"),
-  withTunnel(chunk("midnight-belfry", 3, 270, [ceilingBarbs(52, 22), spinner(122, 78, 20, { amplitude: 30, frequency: 0.3 }), floorBarbs(214, 24)], featherArc([[72, 112], [158, 88], [228, 62]]), [], ANY, ANY, "bells"), tunnelDip(270, -43)),
-  withTunnel(chunk("midnight-finale", 3, 280, [floorBarbs(46, 22, 23), ceilingBarbs(102, 22, 23), floorBarbs(160, 22, 23), ceilingBarbs(218, 22, 23)], featherArc([[64, 60], [120, 120], [178, 60], [236, 120]]), [], ANY, ANY, "eggs"), tunnelWave(280, -32, 30)),
+  // Ashen Depths — expert combinations, still solver-safe.
+  chunk("midnight-needle", 3, 250, [spinner(166, 63, 18)], featherArc([[84, 105], [152, 70], [218, 108]]), [cagePillar(74, PLAY_TOP, 62), cagePillar(142, 102, PLAY_BOTTOM - 102), cagePillar(208, PLAY_TOP, 60)], ANY, ANY, "depths"),
+  chunk("midnight-crank", 3, 260, [{ x: 92, y: 28, w: 10, h: 54, kind: "shutter", attachment: "floating", motion: { amplitude: 18, frequency: 0.42 } }, spinner(181, 80, 20, { amplitude: 28, frequency: 0.36, phase: 0.5 })], featherArc([[106, 118], [150, 90], [212, 62]]), [], ANY, ANY, "depths"),
+  withTunnel(chunk("midnight-nests", 3, 270, [floorBarbs(54, 26), ceilingBarbs(214, 28)], featherArc([[90, 64], [142, 92], [204, 116]]), [perch(96, 116, 38), perch(156, 58, 38)], ANY, ANY, "depths"), tunnelDip(270, 43)),
+  chunk("midnight-beaks", 3, 260, [{ x: 66, y: PLAY_TOP, w: 20, h: 28, kind: "beak", flipY: true }, { x: 138, y: 136, w: 20, h: 28, kind: "beak" }, { x: 210, y: PLAY_TOP, w: 20, h: 28, kind: "beak", flipY: true }], featherArc([[84, 118], [156, 62], [226, 116]]), [], ANY, ANY, "depths"),
+  withTunnel(chunk("midnight-belfry", 3, 270, [ceilingBarbs(52, 22), spinner(122, 78, 20, { amplitude: 30, frequency: 0.3 }), floorBarbs(214, 24)], featherArc([[72, 112], [158, 88], [228, 62]]), [], ANY, ANY, "depths"), tunnelDip(270, -43)),
+  withTunnel(chunk("midnight-finale", 3, 280, [floorBarbs(46, 22, 23), ceilingBarbs(102, 22, 23), floorBarbs(160, 22, 23), ceilingBarbs(218, 22, 23)], featherArc([[64, 60], [120, 120], [178, 60], [236, 120]]), [], ANY, ANY, "depths"), tunnelWave(280, -32, 30)),
 ] as const;
 
 export const TRANSITION_CHUNKS: readonly ChunkDefinition[] = [
-  chunk("passage-nursery-clockwork", 1, 190, [], [], [], ANY, ANY, "passage"),
-  chunk("passage-clockwork-crooked", 2, 190, [], [], [], ANY, ANY, "passage"),
-  chunk("passage-crooked-midnight", 3, 190, [], [], [], ANY, ANY, "passage"),
+  chunk("passage-verdant-dunes", 1, 190, [], [], [], ANY, ANY, "passage"),
+  chunk("passage-dunes-violet", 2, 190, [], [], [], ANY, ANY, "passage"),
+  chunk("passage-violet-ashen", 3, 190, [], [], [], ANY, ANY, "passage"),
 ].map((definition, index) => ({
   ...definition,
   transition: { from: index, to: index + 1 },

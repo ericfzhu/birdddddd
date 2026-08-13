@@ -2,6 +2,7 @@ import Phaser from "phaser";
 import { AudioDirector } from "./audio";
 import { cameraTargetY, trackCameraY } from "./camera";
 import {
+  BIOMES,
   CHAPTERS,
   COLORS,
   FIXED_STEP_SECONDS,
@@ -304,74 +305,84 @@ export class AviaryScene extends Phaser.Scene {
 
   private drawChapterBackground(g: Phaser.GameObjects.Graphics, chapter: number, alpha: number): void {
     if (alpha <= 0) return;
+    const biome = BIOMES[chapter] ?? BIOMES[0];
     if (chapter === 0) {
-      const drift = -((this.model.distance * 0.08) % 72);
-      g.lineStyle(2, COLORS.cream, 0.08 * alpha);
-      for (let x = drift - 72; x < VIEW_WIDTH + 72; x += 72) {
-        g.lineBetween(x, PLAY_BOTTOM, x + 42, PLAY_TOP);
-        g.lineBetween(x + 18, PLAY_BOTTOM, x + 60, PLAY_TOP);
+      const mountainDrift = -((this.model.distance * 0.035) % 96);
+      g.fillStyle(biome.far, 0.48 * alpha);
+      for (let x = mountainDrift - 96; x < VIEW_WIDTH + 96; x += 96) {
+        g.fillTriangle(x, 141, x + 48, 67 + ((x / 96) & 1) * 15, x + 96, 141);
       }
-      for (let index = -1; index < 5; index += 1) {
-        const x = drift + index * 72 + 30;
-        const y = 66 + (index & 1) * 42;
-        g.lineStyle(2, COLORS.yolk, 0.1 * alpha);
-        g.strokeCircle(x, y, 15);
-        g.strokeCircle(x, y + 3, 10);
-        g.fillStyle(COLORS.teal, 0.1 * alpha);
-        g.fillCircle(x + 3, y - 2, 3);
+      const treeDrift = -((this.model.distance * 0.11) % 54);
+      for (let x = treeDrift - 54; x < VIEW_WIDTH + 54; x += 54) {
+        const height = 34 + (Math.abs(Math.round(x / 54)) % 3) * 8;
+        g.fillStyle(biome.terrainDark, 0.46 * alpha);
+        g.fillRect(x + 24, 138 - height, 7, height);
+        g.fillStyle(biome.surface, 0.34 * alpha);
+        g.fillCircle(x + 27, 98 - (height - 34), 18);
+        g.fillCircle(x + 15, 105 - (height - 34), 12);
+        g.fillCircle(x + 39, 107 - (height - 34), 13);
       }
+      g.fillStyle(biome.accent, 0.5 * alpha);
+      for (let x = 11; x < VIEW_WIDTH; x += 43) g.fillRect(x, 52 + ((x * 7) % 79), 2, 2);
       return;
     }
     if (chapter === 1) {
-      const drift = -((this.model.distance * 0.16) % 64);
-      for (let index = -1; index < 7; index += 1) {
-        const x = drift + index * 64 + 20;
-        const y = 54 + (index % 3) * 35;
-        const radius = 13 + (index & 1) * 4;
-        g.lineStyle(3, COLORS.teal, 0.18 * alpha);
-        g.strokeCircle(x, y, radius);
-        g.strokeCircle(x, y, 5);
-        g.fillStyle(COLORS.cream, 0.08 * alpha);
-        for (let tooth = 0; tooth < 8; tooth += 1) {
-          const angle = tooth * Math.PI / 4;
-          g.fillRect(Math.round(x + Math.cos(angle) * radius) - 2, Math.round(y + Math.sin(angle) * radius) - 2, 4, 4);
-        }
+      g.fillStyle(biome.glow, 0.34 * alpha);
+      g.fillCircle(253, 48, 25);
+      const farDrift = -((this.model.distance * 0.045) % 128);
+      for (let x = farDrift - 128; x < VIEW_WIDTH + 128; x += 128) {
+        g.fillStyle(biome.far, 0.36 * alpha);
+        g.fillTriangle(x, 139, x + 66, 78, x + 132, 139);
+        g.fillStyle(biome.accent, 0.16 * alpha);
+        g.fillTriangle(x + 35, 139, x + 85, 95, x + 152, 139);
       }
-      g.lineStyle(2, COLORS.shadow, 0.5 * alpha);
-      for (let x = drift; x < VIEW_WIDTH + 40; x += 64) g.lineBetween(x, PLAY_TOP, x, PLAY_BOTTOM);
+      const ruinDrift = -((this.model.distance * 0.12) % 78);
+      g.fillStyle(biome.terrainDark, 0.34 * alpha);
+      for (let x = ruinDrift - 78; x < VIEW_WIDTH + 78; x += 78) {
+        g.fillRect(x + 18, 103 + ((x / 78) & 1) * 11, 27, 37);
+        g.fillRect(x + 14, 99 + ((x / 78) & 1) * 11, 35, 5);
+        g.fillStyle(biome.surface, 0.22 * alpha);
+        g.fillRect(x + 29, 112 + ((x / 78) & 1) * 11, 5, 28);
+        g.fillStyle(biome.terrainDark, 0.34 * alpha);
+      }
       return;
     }
     if (chapter === 2) {
-      const drift = -((this.model.distance * 0.11) % 86);
-      for (let index = -1; index < 6; index += 1) {
-        const x = drift + index * 86 + 12;
-        const y = 39 + (index & 1) * 43;
-        const lean = (index & 1) ? 7 : -7;
-        g.lineStyle(3, COLORS.cream, 0.1 * alpha);
-        g.lineBetween(x + lean, y, x + 45 + lean, y + 3);
-        g.lineBetween(x + 45 + lean, y + 3, x + 42, y + 38);
-        g.lineBetween(x + 42, y + 38, x, y + 35);
-        g.lineBetween(x, y + 35, x + lean, y);
-        g.fillStyle(COLORS.teal, 0.12 * alpha);
-        g.fillRect(x + 14, y + 13, 18, 10);
-        g.fillStyle(COLORS.yolk, 0.1 * alpha);
-        g.fillCircle(x + 23, y + 18, 3);
+      const chasmDrift = -((this.model.distance * 0.045) % 110);
+      for (let x = chasmDrift - 110; x < VIEW_WIDTH + 110; x += 110) {
+        g.fillStyle(biome.far, 0.62 * alpha);
+        g.fillTriangle(x, PLAY_TOP, x + 36, 92, x + 58, PLAY_TOP);
+        g.fillTriangle(x + 46, PLAY_BOTTOM, x + 82, 88, x + 112, PLAY_BOTTOM);
+        g.fillStyle(biome.surface, 0.23 * alpha);
+        g.fillTriangle(x + 17, 124, x + 27, 96, x + 35, 124);
+        g.fillTriangle(x + 70, 62, x + 82, 34, x + 89, 62);
+      }
+      const sporeDrift = -((this.model.distance * 0.09) % 61);
+      for (let x = sporeDrift; x < VIEW_WIDTH + 20; x += 61) {
+        const y = 47 + (Math.abs(Math.round(x)) % 89);
+        g.fillStyle(biome.glow, (0.22 + Math.sin(this.uiTime * 2 + x) * 0.04) * alpha);
+        g.fillRect(x, y, 3, 3);
+        g.fillRect(x + 11, y + 23, 2, 2);
       }
       return;
     }
 
-    const drift = -((this.model.distance * 0.04) % 96);
-    for (let index = -1; index < 6; index += 1) {
-      const x = drift + index * 96 + 30;
-      const y = 44 + (index % 3) * 38;
-      g.lineStyle(1, COLORS.teal, 0.22 * alpha);
-      g.strokeCircle(x, y, 18 + (index & 1) * 5);
-      g.lineBetween(x, PLAY_TOP, x, y - 20);
-      g.lineBetween(x - 12, y + 14, x + 12, y + 14);
-      g.fillStyle(COLORS.yolk, 0.24 * alpha);
-      g.fillRect(x + 24, y - 18, 2, 2);
-      g.fillRect(x - 31, y + 5, 2, 2);
-      g.fillRect(x + 34, y + 22, 1, 1);
+    const ruinDrift = -((this.model.distance * 0.055) % 92);
+    for (let x = ruinDrift - 92; x < VIEW_WIDTH + 92; x += 92) {
+      const y = 73 + (Math.abs(Math.round(x / 92)) % 2) * 18;
+      g.fillStyle(biome.far, 0.76 * alpha);
+      g.fillRect(x + 19, y, 46, 70);
+      g.fillRect(x + 13, y + 8, 7, 62);
+      g.fillRect(x + 65, y + 8, 7, 62);
+      g.fillStyle(biome.terrainDark, 0.8 * alpha);
+      g.fillRect(x + 30, y + 17, 24, 53);
+      g.fillStyle(biome.accent, 0.28 * alpha);
+      g.fillRect(x + 34, y + 23, 16, 4);
+    }
+    for (let x = 8; x < VIEW_WIDTH; x += 29) {
+      const y = 37 + ((x * 11) % 103);
+      g.fillStyle(biome.glow, (0.35 + Math.sin(this.uiTime * 3 + x) * 0.08) * alpha);
+      g.fillRect(x, y, 2, 2);
     }
   }
 
@@ -388,7 +399,8 @@ export class AviaryScene extends Phaser.Scene {
     const progress = transition?.progress ?? 0;
     this.drawChunkDecorations(g);
     const tunnel = this.model.visibleTunnelPoints();
-    this.drawTunnelFill(g, tunnel);
+    this.drawTunnelFill(g, tunnel, from, 1 - progress);
+    if (to !== from) this.drawTunnelFill(g, tunnel, to, progress);
     this.drawTunnelRails(g, tunnel, from, 1 - progress);
     if (to !== from) this.drawTunnelRails(g, tunnel, to, progress);
     this.drawTransitionPassages(g);
@@ -400,27 +412,24 @@ export class AviaryScene extends Phaser.Scene {
     if (this.model.animationState() !== "gone") this.drawBird(g);
   }
 
-  private drawTunnelFill(g: Phaser.GameObjects.Graphics, tunnel: VisibleTunnelPoint[]): void {
+  private drawTunnelFill(g: Phaser.GameObjects.Graphics, tunnel: VisibleTunnelPoint[], chapter: number, alpha: number): void {
     const first = tunnel[0];
     const last = tunnel.at(-1);
     if (!first || !last) return;
     const ceiling = tunnel.map((point) => new Phaser.Math.Vector2(point.x, point.ceiling));
     const floor = tunnel.map((point) => new Phaser.Math.Vector2(point.x, point.floor));
-    g.fillStyle(COLORS.ink, 0.96);
+    const biome = BIOMES[chapter] ?? BIOMES[0];
+    g.fillStyle(biome.terrain, alpha);
     g.fillPoints([new Phaser.Math.Vector2(first.x, -VIEW_HEIGHT * 2), ...ceiling, new Phaser.Math.Vector2(last.x, -VIEW_HEIGHT * 2)], true);
     g.fillPoints([new Phaser.Math.Vector2(first.x, VIEW_HEIGHT * 3), ...floor, new Phaser.Math.Vector2(last.x, VIEW_HEIGHT * 3)], true);
   }
 
   private drawTunnelRails(g: Phaser.GameObjects.Graphics, tunnel: VisibleTunnelPoint[], chapter: number, alpha: number): void {
     if (alpha <= 0 || tunnel.length < 2) return;
-    const styles = [
-      { primary: COLORS.cream, secondary: COLORS.teal, fastener: COLORS.yolk, thickness: 3, spacing: 24 },
-      { primary: COLORS.teal, secondary: COLORS.cream, fastener: COLORS.yolk, thickness: 4, spacing: 18 },
-      { primary: COLORS.shadow, secondary: COLORS.cream, fastener: COLORS.teal, thickness: 5, spacing: 20 },
-      { primary: COLORS.teal, secondary: COLORS.cream, fastener: COLORS.yolk, thickness: 3, spacing: 28 },
-    ] as const;
-    const style = styles[chapter] ?? styles[0];
-    g.lineStyle(style.thickness, style.primary, alpha);
+    const biome = BIOMES[chapter] ?? BIOMES[0];
+    const thickness = chapter === 2 ? 4 : 3;
+    const spacing = [14, 18, 20, 16][chapter] ?? 16;
+    g.lineStyle(thickness, biome.surface, alpha);
     for (let index = 1; index < tunnel.length; index += 1) {
       const previous = tunnel[index - 1];
       const point = tunnel[index];
@@ -428,7 +437,7 @@ export class AviaryScene extends Phaser.Scene {
       g.lineBetween(previous.x, previous.ceiling, point.x, point.ceiling);
       g.lineBetween(previous.x, previous.floor, point.x, point.floor);
     }
-    g.lineStyle(1, style.secondary, 0.9 * alpha);
+    g.lineStyle(1, biome.accent, 0.82 * alpha);
     for (let index = 1; index < tunnel.length; index += 1) {
       const previous = tunnel[index - 1];
       const point = tunnel[index];
@@ -436,13 +445,24 @@ export class AviaryScene extends Phaser.Scene {
       g.lineBetween(previous.x, previous.ceiling + 2, point.x, point.ceiling + 2);
       g.lineBetween(previous.x, previous.floor - 2, point.x, point.floor - 2);
     }
-    const drift = -((this.model.distance * 0.65) % style.spacing);
-    for (let x = drift; x < VIEW_WIDTH + style.spacing; x += style.spacing) {
+    const drift = -((this.model.distance * 0.65) % spacing);
+    for (let x = drift; x < VIEW_WIDTH + spacing; x += spacing) {
       const point = tunnel[Math.max(0, Math.min(tunnel.length - 1, Math.round((x + 4) / 4)))];
       if (!point) continue;
-      g.fillStyle(style.fastener, 0.9 * alpha);
-      g.fillRect(x, point.ceiling - 2, 3, 3);
-      g.fillRect(x + Math.floor(style.spacing / 2), point.floor, 3, 3);
+      g.fillStyle(chapter === 3 ? biome.glow : biome.terrainDark, 0.75 * alpha);
+      if (chapter === 0) {
+        g.fillRect(x, point.ceiling - 2, 2, 3);
+        g.fillRect(x + Math.floor(spacing / 2), point.floor, 2, 3);
+      } else if (chapter === 1) {
+        g.fillRect(x, point.ceiling - 3, 6, 2);
+        g.fillRect(x + Math.floor(spacing / 2), point.floor + 1, 6, 2);
+      } else if (chapter === 2) {
+        g.fillTriangle(x, point.ceiling, x + 3, point.ceiling - 5, x + 6, point.ceiling);
+        g.fillTriangle(x, point.floor, x + 3, point.floor + 5, x + 6, point.floor);
+      } else {
+        g.fillRect(x, point.ceiling - 2, 4, 2);
+        g.fillRect(x + Math.floor(spacing / 2), point.floor + 1, 4, 2);
+      }
     }
   }
 
@@ -456,118 +476,110 @@ export class AviaryScene extends Phaser.Scene {
       const y = 48 + (idValue % 3) * 34 + this.model.terrainOffsetAtWorldX(chunk.startX + localX);
       if (x < -36 || x > VIEW_WIDTH + 36) continue;
       switch (chunk.definition.decoration) {
-        case "nest":
-          this.drawNestAndFeeder(g, x, y);
+        case "forest":
+          this.drawForestProp(g, x, y, idValue);
           break;
-        case "gears":
-          this.drawGearAndSpring(g, x, y);
+        case "desert":
+          this.drawDesertProp(g, x, y, idValue);
           break;
-        case "bells":
-          this.drawHangingBell(g, x, y);
+        case "blight":
+          this.drawBlightProp(g, x, y, idValue);
           break;
-        case "eggs":
-          this.drawClockworkEgg(g, x, y);
+        case "depths":
+          this.drawDepthsProp(g, x, y, idValue);
           break;
         case "passage":
           break;
       }
-      this.drawBackgroundBird(g, x + 31, y + (idValue % 2 === 0 ? 20 : -18), chunk.definition.chapter);
     }
   }
 
-  private drawNestAndFeeder(g: Phaser.GameObjects.Graphics, x: number, y: number): void {
-    g.lineStyle(1, COLORS.teal, 0.4);
-    g.lineBetween(x, PLAY_TOP, x, y - 8);
-    g.fillStyle(COLORS.teal, 0.42);
-    g.fillRect(x - 6, y - 8, 12, 11);
-    g.fillStyle(COLORS.shadow, 0.7);
-    g.fillRect(x - 4, y - 5, 8, 2);
-    g.fillRect(x - 2, y + 3, 4, 4);
-    g.lineStyle(2, COLORS.teal, 0.4);
-    g.strokeCircle(x + 17, y + 13, 10);
-    g.lineBetween(x + 8, y + 13, x + 26, y + 13);
-    g.lineBetween(x + 10, y + 17, x + 24, y + 17);
-  }
-
-  private drawGearAndSpring(g: Phaser.GameObjects.Graphics, x: number, y: number): void {
-    g.lineStyle(2, COLORS.teal, 0.42);
-    g.strokeCircle(x, y, 11);
-    g.strokeCircle(x, y, 3);
-    g.fillStyle(COLORS.teal, 0.38);
-    for (let tooth = 0; tooth < 8; tooth += 1) {
-      const angle = tooth * Math.PI / 4;
-      g.fillRect(Math.round(x + Math.cos(angle) * 12) - 2, Math.round(y + Math.sin(angle) * 12) - 2, 4, 4);
-    }
-    const springX = x + 21;
-    g.lineStyle(1, COLORS.teal, 0.42);
-    g.lineBetween(springX, PLAY_TOP, springX, y - 12);
-    for (let offset = -12; offset < 13; offset += 4) {
-      const side = ((offset + 12) / 4) % 2 === 0 ? -4 : 4;
-      g.lineBetween(springX - side, y + offset, springX + side, y + offset + 4);
+  private drawForestProp(g: Phaser.GameObjects.Graphics, x: number, y: number, variant: number): void {
+    const biome = BIOMES[0];
+    if (variant % 2 === 0) {
+      g.fillStyle(biome.terrainDark, 0.66);
+      g.fillRect(x - 3, y - 4, 8, 31);
+      g.fillRect(x - 12, y - 6, 12, 5);
+      g.fillStyle(biome.surface, 0.55);
+      g.fillCircle(x - 3, y - 12, 12);
+      g.fillCircle(x + 8, y - 8, 10);
+      g.fillCircle(x - 12, y - 5, 8);
+      g.fillStyle(biome.accent, 0.65);
+      g.fillRect(x + 5, y - 16, 3, 3);
+    } else {
+      g.fillStyle(biome.terrainDark, 0.62);
+      g.fillRect(x - 12, y + 5, 25, 6);
+      g.fillRect(x - 8, y - 5, 17, 11);
+      g.fillStyle(biome.surface, 0.56);
+      g.fillRect(x - 10, y - 7, 21, 4);
+      g.fillStyle(biome.glow, 0.6);
+      g.fillRect(x - 6, y - 13, 3, 3);
+      g.fillRect(x + 5, y - 11, 2, 2);
     }
   }
 
-  private drawHangingBell(g: Phaser.GameObjects.Graphics, x: number, y: number): void {
-    const swing = this.settings.reducedMotion ? 0 : Math.round(Math.sin(this.uiTime * 2.4 + x * 0.02) * 2);
-    const bellX = x + swing;
-    g.lineStyle(1, COLORS.teal, 0.42);
-    g.lineBetween(x, PLAY_TOP, bellX, y - 11);
-    g.fillStyle(COLORS.teal, 0.46);
-    g.fillTriangle(bellX - 9, y + 5, bellX, y - 11, bellX + 9, y + 5);
-    g.fillRect(bellX - 10, y + 4, 20, 3);
-    g.fillStyle(COLORS.shadow, 0.74);
-    g.fillRect(bellX - 1, y + 7, 3, 4);
-    g.lineStyle(1, COLORS.teal, 0.32);
-    g.lineBetween(bellX - 15, y + 15, bellX + 15, y + 15);
+  private drawDesertProp(g: Phaser.GameObjects.Graphics, x: number, y: number, variant: number): void {
+    const biome = BIOMES[1];
+    if (variant % 2 === 0) {
+      g.fillStyle(0x3f7b59, 0.65);
+      g.fillRect(x - 3, y - 18, 7, 37);
+      g.fillRect(x - 11, y - 7, 10, 6);
+      g.fillRect(x - 11, y - 7, 5, 13);
+      g.fillRect(x + 3, y - 1, 10, 6);
+      g.fillRect(x + 9, y - 9, 4, 13);
+      g.fillStyle(biome.accent, 0.6);
+      g.fillRect(x - 1, y - 14, 2, 2);
+    } else {
+      g.fillStyle(biome.terrainDark, 0.56);
+      g.fillRect(x - 15, y - 8, 30, 22);
+      g.fillRect(x - 20, y - 12, 40, 5);
+      g.fillStyle(biome.surface, 0.42);
+      g.fillRect(x - 10, y - 3, 6, 17);
+      g.fillRect(x + 5, y - 3, 6, 17);
+      g.fillStyle(biome.accent, 0.5);
+      g.fillRect(x - 17, y - 10, 8, 2);
+    }
   }
 
-  private drawClockworkEgg(g: Phaser.GameObjects.Graphics, x: number, y: number): void {
-    g.fillStyle(COLORS.shadow, 0.62);
-    g.fillEllipse(x + 2, y + 3, 20, 27);
-    g.fillStyle(COLORS.teal, 0.34);
-    g.fillEllipse(x, y, 20, 27);
-    g.lineStyle(2, COLORS.teal, 0.48);
-    g.strokeEllipse(x, y, 15, 21);
-    g.lineBetween(x - 7, y, x + 7, y);
-    g.strokeCircle(x, y + 4, 3);
-    const keyLift = this.settings.reducedMotion ? 0 : Math.round(Math.sin(this.uiTime * 3 + x) * 1);
-    g.lineBetween(x + 10, y - 7, x + 16, y - 10 + keyLift);
-    g.lineBetween(x + 16, y - 14 + keyLift, x + 16, y - 6 + keyLift);
+  private drawBlightProp(g: Phaser.GameObjects.Graphics, x: number, y: number, variant: number): void {
+    const biome = BIOMES[2];
+    if (variant % 2 === 0) {
+      g.fillStyle(biome.surface, 0.48);
+      g.fillRect(x - 2, y - 2, 5, 22);
+      g.fillStyle(biome.accent, 0.58);
+      g.fillEllipse(x, y - 5, 26, 11);
+      g.fillStyle(biome.glow, 0.75);
+      g.fillRect(x - 7, y - 8, 3, 2);
+      g.fillRect(x + 4, y - 6, 2, 2);
+    } else {
+      g.fillStyle(biome.surface, 0.52);
+      g.fillTriangle(x - 13, y + 15, x - 5, y - 15, x + 1, y + 15);
+      g.fillTriangle(x - 1, y + 15, x + 8, y - 6, x + 14, y + 15);
+      g.fillStyle(biome.glow, 0.48);
+      g.fillTriangle(x - 10, y + 10, x - 5, y - 11, x - 2, y + 10);
+    }
   }
 
-  private drawBackgroundBird(g: Phaser.GameObjects.Graphics, x: number, y: number, chapter: number): void {
-    const alpha = 0.28 + chapter * 0.025;
-    g.fillStyle(COLORS.shadow, alpha + 0.2);
-    if (chapter === 0) {
-      g.fillCircle(x, y, 6);
-      g.fillRect(x - 5, y + 3, 10, 7);
-      g.fillStyle(COLORS.teal, alpha);
-      g.fillRect(x + 2, y - 1, 2, 2);
-      return;
+  private drawDepthsProp(g: Phaser.GameObjects.Graphics, x: number, y: number, variant: number): void {
+    const biome = BIOMES[3];
+    if (variant % 2 === 0) {
+      g.fillStyle(biome.terrainDark, 0.72);
+      g.fillRect(x - 15, y - 10, 30, 27);
+      g.fillStyle(biome.surface, 0.62);
+      for (let row = 0; row < 3; row += 1) {
+        for (let column = 0; column < 3; column += 1) g.fillRect(x - 13 + column * 10 + (row % 2) * 4, y - 8 + row * 8, 8, 5);
+      }
+      g.fillStyle(biome.glow, 0.52);
+      g.fillRect(x - 4, y - 5, 8, 10);
+    } else {
+      g.fillStyle(biome.surface, 0.58);
+      g.fillRect(x - 2, y - 16, 5, 33);
+      g.fillRect(x - 9, y - 14, 19, 4);
+      g.fillStyle(biome.accent, 0.72);
+      g.fillRect(x - 5, y - 7, 11, 11);
+      g.fillStyle(biome.glow, 0.88);
+      g.fillRect(x - 2, y - 4, 5, 5);
     }
-    if (chapter === 1) {
-      g.fillRect(x - 7, y - 6, 14, 15);
-      g.fillRect(x - 3, y - 10, 8, 5);
-      g.lineStyle(1, COLORS.teal, alpha);
-      g.lineBetween(x + 7, y - 3, x + 12, y - 6);
-      g.lineBetween(x + 12, y - 9, x + 12, y - 3);
-      return;
-    }
-    if (chapter === 2) {
-      g.fillEllipse(x, y + 4, 14, 18);
-      g.fillRect(x + 2, y - 10, 4, 14);
-      g.fillCircle(x + 4, y - 12, 5);
-      g.fillStyle(COLORS.teal, alpha);
-      g.fillRect(x + 5, y - 13, 2, 2);
-      return;
-    }
-    g.fillEllipse(x, y + 3, 18, 14);
-    g.fillCircle(x - 5, y - 6, 5);
-    g.fillCircle(x + 5, y - 7, 5);
-    g.fillStyle(COLORS.teal, alpha + 0.05);
-    g.fillRect(x - 6, y - 7, 2, 2);
-    g.fillRect(x + 5, y - 8, 2, 2);
-    g.fillRect(x, y + 2, 2, 2);
   }
 
   private drawTransitionPassages(g: Phaser.GameObjects.Graphics): void {
@@ -579,17 +591,21 @@ export class AviaryScene extends Phaser.Scene {
       const start = left - ((left % 30 + 30) % 30);
       for (let x = start; x <= right; x += 30) {
         if (x < left || x > right) continue;
-        g.fillStyle(COLORS.shadow, 0.8);
-        g.fillRect(x + 2, PLAY_TOP, 4, 12);
-        g.fillRect(x + 2, PLAY_BOTTOM - 12, 4, 12);
-        g.fillStyle(COLORS.cream, 0.72);
-        g.fillRect(x, PLAY_TOP, 3, 10);
-        g.fillRect(x, PLAY_BOTTOM - 10, 3, 10);
-        g.fillStyle(COLORS.teal, 0.9);
-        g.fillRect(x + 3, PLAY_TOP + 8, 5, 2);
-        g.fillRect(x + 3, PLAY_BOTTOM - 10, 5, 2);
+        const fromBiome = BIOMES[chunk.definition.transition.from] ?? BIOMES[0];
+        const toBiome = BIOMES[chunk.definition.transition.to] ?? fromBiome;
+        const blend = Math.max(0, Math.min(1, (x - left) / Math.max(1, right - left)));
+        const material = blend < 0.5 ? fromBiome : toBiome;
+        g.fillStyle(material.terrainDark, 0.9);
+        g.fillRect(x, PLAY_TOP, 5, 14);
+        g.fillRect(x, PLAY_BOTTOM - 14, 5, 14);
+        g.fillStyle(material.surface, 0.95);
+        g.fillRect(x + 1, PLAY_TOP + 8, 7, 3);
+        g.fillRect(x + 1, PLAY_BOTTOM - 11, 7, 3);
+        g.fillStyle(material.glow, 0.75);
+        g.fillRect(x + 2, PLAY_TOP + 3, 2, 2);
+        g.fillRect(x + 2, PLAY_BOTTOM - 5, 2, 2);
       }
-      g.lineStyle(1, COLORS.yolk, 0.5);
+      g.lineStyle(1, COLORS.cream, 0.4);
       g.lineBetween(left, PLAY_TOP + 12, right, PLAY_TOP + 12);
       g.lineBetween(left, PLAY_BOTTOM - 12, right, PLAY_BOTTOM - 12);
     }
@@ -600,77 +616,67 @@ export class AviaryScene extends Phaser.Scene {
       if (chunk.definition.transition) continue;
       const x = chunk.startX + chunk.definition.width - 12 - this.model.distance;
       if (x < -8 || x > VIEW_WIDTH + 8) continue;
-      g.fillStyle(COLORS.teal, 0.28);
-      for (let y = PLAY_TOP + 7; y < PLAY_BOTTOM - 5; y += 14) g.fillRect(x, y, 2, 7);
-      g.fillStyle(COLORS.cream, 0.48);
-      g.fillRect(x - 2, PLAY_TOP, 6, 3);
-      g.fillRect(x - 2, PLAY_BOTTOM - 3, 6, 3);
+      const biome = BIOMES[chunk.definition.chapter] ?? BIOMES[0];
+      g.fillStyle(biome.glow, 0.32);
+      for (let y = PLAY_TOP + 8; y < PLAY_BOTTOM - 5; y += 13) {
+        g.fillRect(x, y, 2, 5);
+        g.fillRect(x - 1, y + 1, 4, 2);
+      }
+      g.fillStyle(biome.surface, 0.62);
+      g.fillTriangle(x - 3, PLAY_TOP + 4, x + 1, PLAY_TOP, x + 5, PLAY_TOP + 4);
+      g.fillTriangle(x - 3, PLAY_BOTTOM - 4, x + 1, PLAY_BOTTOM, x + 5, PLAY_BOTTOM - 4);
     }
   }
 
   private drawChapterSolid(g: Phaser.GameObjects.Graphics, rect: VisibleRect): void {
+    const biome = BIOMES[rect.chapter] ?? BIOMES[0];
+    g.fillStyle(biome.terrainDark, 0.96);
+    g.fillRect(rect.x + 2, rect.y + 2, rect.w, rect.h);
     if (rect.chapter === 0) {
-      g.fillStyle(COLORS.shadow, 0.9);
-      g.fillRect(rect.x + 2, rect.y + 2, rect.w, rect.h);
-      g.fillStyle(COLORS.cream, 1);
+      g.fillStyle(0x6b4628, 1);
       g.fillRect(rect.x, rect.y, rect.w, rect.h);
-      g.fillStyle(COLORS.yolk, 0.9);
-      for (let x = rect.x + 8; x < rect.x + rect.w - 2; x += 21) g.fillCircle(x, rect.y + rect.h / 2, 2);
-      g.fillStyle(COLORS.teal, 0.9);
-      g.fillRect(rect.x + 3, rect.y + (rect.h > 5 ? 1 : 0), Math.min(8, rect.w - 4), 2);
+      g.fillStyle(biome.surface, 1);
+      g.fillRect(rect.x, rect.y, rect.w, 2);
+      g.fillStyle(biome.accent, 0.85);
+      for (let x = rect.x + 5; x < rect.x + rect.w; x += 13) g.fillRect(x, rect.y - 1, 3, 3);
       return;
     }
     if (rect.chapter === 1) {
-      g.fillStyle(COLORS.shadow, 1);
-      g.fillRect(rect.x + 2, rect.y + 2, rect.w, rect.h);
-      g.fillStyle(COLORS.teal, 1);
+      g.fillStyle(biome.surface, 1);
       g.fillRect(rect.x, rect.y, rect.w, rect.h);
-      g.fillStyle(COLORS.cream, 0.95);
+      g.fillStyle(biome.accent, 0.9);
       g.fillRect(rect.x, rect.y, rect.w, 2);
-      for (let x = rect.x + 4; x < rect.x + rect.w - 1; x += 10) {
-        g.fillStyle(COLORS.yolk, 1);
-        g.fillRect(x, rect.y + Math.min(3, rect.h - 2), 2, 2);
-        g.fillStyle(COLORS.cream, 0.65);
-        g.fillRect(x + 3, rect.y + rect.h - 1, 5, 2);
-      }
+      g.fillStyle(biome.terrain, 0.75);
+      for (let x = rect.x + 3; x < rect.x + rect.w - 2; x += 9) g.fillRect(x, rect.y + Math.max(2, rect.h - 3), 6, 2);
       return;
     }
     if (rect.chapter === 2) {
-      g.fillStyle(COLORS.shadow, 1);
-      g.fillRect(rect.x + 3, rect.y + 3, rect.w, rect.h);
-      g.fillStyle(COLORS.cream, 1);
+      g.fillStyle(biome.terrain, 1);
       g.fillRect(rect.x, rect.y, rect.w, rect.h);
-      g.fillStyle(COLORS.teal, 0.9);
-      g.fillRect(rect.x + 3, rect.y + 2, Math.max(1, rect.w - 6), Math.max(2, rect.h - 4));
-      g.fillStyle(COLORS.yolk, 1);
-      g.fillRect(rect.x, rect.y, Math.min(5, rect.w), 2);
-      g.fillRect(rect.x + Math.max(0, rect.w - 5), rect.y + Math.max(0, rect.h - 2), Math.min(5, rect.w), 2);
+      g.fillStyle(biome.surface, 1);
+      for (let x = rect.x; x < rect.x + rect.w; x += 9) g.fillTriangle(x, rect.y + 4, x + 4, rect.y - 2, x + 8, rect.y + 4);
+      g.fillStyle(biome.glow, 0.65);
+      g.fillRect(rect.x + 3, rect.y + Math.max(2, rect.h - 3), Math.max(1, rect.w - 6), 2);
       return;
     }
 
-    g.fillStyle(COLORS.shadow, 1);
-    g.fillRect(rect.x + 2, rect.y + 2, rect.w, rect.h);
-    g.fillStyle(COLORS.ink, 1);
+    g.fillStyle(biome.terrain, 1);
     g.fillRect(rect.x, rect.y, rect.w, rect.h);
-    g.fillStyle(COLORS.teal, 1);
+    g.fillStyle(biome.surface, 1);
     g.fillRect(rect.x, rect.y, rect.w, 2);
-    g.fillRect(rect.x, rect.y + rect.h - 1, rect.w, 1);
-    for (let x = rect.x + 5; x < rect.x + rect.w - 2; x += 14) {
-      g.fillStyle(COLORS.cream, 0.85);
-      g.fillRect(x, rect.y + 2, 5, 1);
-      g.fillStyle(COLORS.yolk, 1);
-      g.fillRect(x + 1, rect.y + Math.max(2, rect.h - 3), 2, 2);
+    for (let x = rect.x + 4; x < rect.x + rect.w - 2; x += 11) {
+      g.fillStyle(biome.accent, 0.9);
+      g.fillRect(x, rect.y + Math.max(2, rect.h - 3), 4, 2);
     }
   }
 
   private drawCagePillar(g: Phaser.GameObjects.Graphics, rect: VisibleRect): void {
-    const primary = rect.chapter === 1 ? COLORS.teal : COLORS.cream;
-    const secondary = rect.chapter === 2 ? COLORS.yolk : COLORS.teal;
-    g.fillStyle(COLORS.shadow, 0.9);
+    const biome = BIOMES[rect.chapter] ?? BIOMES[0];
+    g.fillStyle(biome.terrainDark, 0.95);
     g.fillRect(rect.x + 2, rect.y + 2, rect.w, rect.h);
-    g.fillStyle(primary, 1);
+    g.fillStyle(rect.chapter === 0 ? 0x6b4628 : biome.surface, 1);
     g.fillRect(rect.x + 1, rect.y, Math.max(2, rect.w - 2), rect.h);
-    g.fillStyle(secondary, 0.95);
+    g.fillStyle(biome.accent, 0.95);
     for (let y = rect.y + 4; y < rect.y + rect.h - 1; y += 9) g.fillRect(rect.x, y, rect.w, 2);
   }
 
@@ -684,7 +690,8 @@ export class AviaryScene extends Phaser.Scene {
       return;
     }
     if (rect.kind === "thorns") {
-      g.fillStyle(COLORS.coral, 1);
+      const biome = BIOMES[rect.chapter] ?? BIOMES[0];
+      g.fillStyle(biome.danger, 1);
       const count = Math.max(1, Math.ceil(rect.w / 7));
       const unit = rect.w / count;
       for (let index = 0; index < count; index += 1) {
@@ -692,15 +699,16 @@ export class AviaryScene extends Phaser.Scene {
         if (rect.flipY) g.fillTriangle(left, rect.y, left + unit / 2, rect.y + rect.h, left + unit, rect.y);
         else g.fillTriangle(left, rect.y + rect.h, left + unit / 2, rect.y, left + unit, rect.y + rect.h);
       }
-      g.fillStyle(COLORS.ink, 0.55);
+      g.fillStyle(biome.terrainDark, 0.8);
       g.fillRect(rect.x, rect.flipY ? rect.y : rect.y + rect.h - 3, rect.w, 3);
       return;
     }
     if (rect.kind === "barbs") {
-      g.fillStyle(COLORS.shadow, 1);
+      const biome = BIOMES[rect.chapter] ?? BIOMES[0];
+      g.fillStyle(biome.terrainDark, 1);
       const baseY = rect.flipY ? rect.y : rect.y + rect.h - 5;
       g.fillRect(rect.x, baseY, rect.w, 5);
-      g.fillStyle(COLORS.coral, 1);
+      g.fillStyle(biome.danger, 1);
       const widths = [8, 11, 7, 10];
       let cursor = rect.x;
       let index = 0;
@@ -712,41 +720,44 @@ export class AviaryScene extends Phaser.Scene {
         cursor += width;
         index += 1;
       }
-      g.fillStyle(COLORS.cream, 0.75);
+      g.fillStyle(biome.glow, 0.75);
       for (let x = rect.x + 4; x < rect.x + rect.w - 2; x += 9) g.fillRect(x, baseY + 1, 2, 2);
       return;
     }
     if (rect.kind === "shutter") {
-      g.fillStyle(COLORS.shadow, 1);
+      const biome = BIOMES[rect.chapter] ?? BIOMES[0];
+      g.fillStyle(biome.terrainDark, 1);
       g.fillRect(rect.x + 2, rect.y + 2, rect.w, rect.h);
-      g.fillStyle(COLORS.cream, 1);
+      g.fillStyle(rect.chapter === 2 ? biome.surface : biome.terrain, 1);
       g.fillRect(rect.x, rect.y, rect.w, rect.h);
-      g.fillStyle(COLORS.coral, 1);
+      g.fillStyle(biome.danger, 1);
       for (let y = rect.y + 5; y < rect.y + rect.h - 3; y += 9) g.fillRect(rect.x + 2, y, rect.w - 4, 3);
       return;
     }
     if (rect.kind === "beak") {
-      g.fillStyle(COLORS.coral, 1);
+      const biome = BIOMES[rect.chapter] ?? BIOMES[0];
+      g.fillStyle(biome.danger, 1);
       if (rect.flipY) g.fillTriangle(rect.x, rect.y, rect.x + rect.w, rect.y, rect.x + rect.w / 2, rect.y + rect.h);
       else g.fillTriangle(rect.x, rect.y + rect.h, rect.x + rect.w, rect.y + rect.h, rect.x + rect.w / 2, rect.y);
-      g.fillStyle(COLORS.cream, 0.72);
+      g.fillStyle(biome.glow, 0.72);
       g.fillCircle(rect.x + rect.w / 2, rect.flipY ? rect.y + 5 : rect.y + rect.h - 5, 2);
       return;
     }
     if (rect.kind === "spinner") {
+      const biome = BIOMES[rect.chapter] ?? BIOMES[0];
       const centerX = rect.x + rect.w / 2;
       const centerY = rect.y + rect.h / 2;
       const radius = Math.min(rect.w, rect.h) / 2 - 3;
       const rotation = this.settings.reducedMotion ? 0 : this.uiTime * 3.4;
-      g.fillStyle(COLORS.coral, 1);
+      g.fillStyle(biome.danger, 1);
       g.fillCircle(centerX, centerY, radius);
       for (let tooth = 0; tooth < 8; tooth += 1) {
         const angle = rotation + tooth * Math.PI / 4;
         g.fillRect(Math.round(centerX + Math.cos(angle) * (radius + 1)) - 2, Math.round(centerY + Math.sin(angle) * (radius + 1)) - 2, 4, 4);
       }
-      g.fillStyle(COLORS.ink, 1);
+      g.fillStyle(biome.terrainDark, 1);
       g.fillCircle(centerX, centerY, Math.max(2, radius - 4));
-      g.fillStyle(COLORS.cream, 0.9);
+      g.fillStyle(biome.glow, 0.9);
       g.fillRect(centerX - 1, centerY - 1, 3, 3);
     }
   }
@@ -775,12 +786,15 @@ export class AviaryScene extends Phaser.Scene {
     const bodyHeight = PLAYER_HEIGHT - squash;
     const bodyY = y - bodyHeight / 2 + (gravity > 0 ? squash / 2 : -squash / 2);
 
-    g.fillStyle(COLORS.shadow, 0.75);
-    g.fillRect(x - PLAYER_WIDTH / 2 + 2, bodyY + 2, PLAYER_WIDTH, bodyHeight);
+    g.fillStyle(0x3b2630, 0.82);
+    g.fillRect(x - PLAYER_WIDTH / 2 + 1, bodyY + 2, PLAYER_WIDTH, bodyHeight - 1);
     const deathFlash = stunned && Math.floor(this.model.deathTimer * 24) % 2 === 1;
-    g.fillStyle(deathFlash ? COLORS.cream : COLORS.yolk, 1);
-    g.fillRect(x - PLAYER_WIDTH / 2, bodyY, PLAYER_WIDTH - 2, bodyHeight);
-    g.fillRect(x + 4, bodyY + 2, 4, Math.max(2, bodyHeight - 4));
+    g.fillStyle(deathFlash ? COLORS.cream : 0xe6a63c, 1);
+    g.fillRect(x - PLAYER_WIDTH / 2, bodyY + 2, PLAYER_WIDTH - 1, Math.max(2, bodyHeight - 4));
+    g.fillRect(x - 5, bodyY, 9, bodyHeight);
+    g.fillStyle(deathFlash ? COLORS.cream : 0xf2c25b, 1);
+    g.fillRect(x - 4, bodyY + 1, 7, Math.max(2, bodyHeight - 4));
+    g.fillRect(x + 3, bodyY + 3, 4, Math.max(2, bodyHeight - 6));
 
     g.fillStyle(COLORS.cream, 1);
     const eyeY = y - gravity * 2;
@@ -796,15 +810,15 @@ export class AviaryScene extends Phaser.Scene {
       g.fillRect(x + 5, eyeY - 1, 2, 2);
     }
 
-    g.fillStyle(COLORS.teal, 1);
+    g.fillStyle(0xb66f35, 1);
     const wingY = y + gravity * (stunned ? 3 : 1 + flutter * 2);
     const wingReach = stunned ? 7 : animation === "flutter" ? (flutter > 0 ? 7 : 4) : 4;
     g.fillTriangle(x - 4, wingY - 3, x + 1, wingY, x - wingReach, wingY + gravity * 5);
     if (stunned) g.fillTriangle(x + 3, wingY - 2, x + 7, wingY, x + 5, wingY + gravity * 6);
 
-    g.fillStyle(COLORS.coral, 1);
+    g.fillStyle(0xd9793d, 1);
     g.fillTriangle(x + 8, y - 2, x + 12, y + (stunned ? 2 : 0), x + 8, y + 2);
-    g.fillStyle(COLORS.cream, 1);
+    g.fillStyle(0xf1d38b, 1);
     const feetY = y + gravity * (bodyHeight / 2 + 2);
     const footOffset = running ? (runFrame === 0 ? -2 : 2) : 0;
     g.fillRect(x - 3 + footOffset, feetY - (gravity < 0 ? 1 : 0), 3, 1);
@@ -814,7 +828,7 @@ export class AviaryScene extends Phaser.Scene {
       g.fillRect(x + 3 - footOffset, feetY + gravity, 2, 1);
     }
 
-    g.fillStyle(COLORS.yolk, 1);
+    g.fillStyle(0xc67d32, 1);
     const tailKick = running && runFrame === 1 ? 1 : 0;
     g.fillRect(x - 9 - tailKick, y - gravity * 4, 3, 2);
     g.fillRect(x - 10, y + gravity * (1 + tailKick), 4, 2);
@@ -854,10 +868,7 @@ export class AviaryScene extends Phaser.Scene {
       g.fillStyle(COLORS.yolk, 1);
       g.fillTriangle(PLAYER_X - 5, arrowY + 4, PLAYER_X + 5, arrowY + 4, PLAYER_X, arrowY - 3);
       g.fillRect(PLAYER_X - 1, arrowY + 3, 2, 8);
-      g.fillStyle(COLORS.ink, 0.68);
-      g.fillRoundedRect(86, 36, 148, 93, 8);
-      g.lineStyle(1, COLORS.cream, 0.12);
-      g.strokeRoundedRect(86, 36, 148, 93, 8);
+      this.drawPixelPanel(g, 86, 36, 148, 93, 0);
     }
 
     this.drawTopButtons(g);
@@ -865,9 +876,10 @@ export class AviaryScene extends Phaser.Scene {
 
     if (this.chapterBanner > 0 && mode === "playing") {
       const alpha = Math.min(1, this.chapterBanner * 2);
-      g.fillStyle(COLORS.ink, 0.72 * alpha);
+      const biome = BIOMES[this.bannerChapter] ?? BIOMES[0];
+      g.fillStyle(biome.terrainDark, 0.86 * alpha);
       g.fillRect(82, 43, 156, 18);
-      g.lineStyle(1, COLORS.cream, 0.2 * alpha);
+      g.lineStyle(1, biome.accent, 0.7 * alpha);
       g.strokeRect(82, 43, 156, 18);
       this.chapterText.setText(`ENTERING · ${CHAPTERS[this.bannerChapter]?.name ?? ""}`).setAlpha(alpha).setVisible(true);
     } else {
@@ -884,10 +896,7 @@ export class AviaryScene extends Phaser.Scene {
     }
 
     if (revealDeathPanel) {
-      g.fillStyle(COLORS.ink, 0.82);
-      g.fillRoundedRect(82, 45, 156, 96, 10);
-      g.lineStyle(1, COLORS.cream, 0.16);
-      g.strokeRoundedRect(82, 45, 156, 96, 10);
+      this.drawPixelPanel(g, 82, 45, 156, 96, this.model.chapter);
       this.resultText.setText(`SCORE ${this.model.score}\nBEST  ${this.model.bestScore}`);
       const ready = this.model.deathTimer >= 0.32;
       this.helperText.setText(ready ? "TAP TO TRY AGAIN" : "...").setY(122).setAlpha(ready ? 0.75 + Math.sin(this.uiTime * 5) * 0.2 : 0.5);
@@ -896,12 +905,13 @@ export class AviaryScene extends Phaser.Scene {
 
   private drawTopButtons(g: Phaser.GameObjects.Graphics): void {
     const paused = this.model.mode === "paused";
-    g.fillStyle(COLORS.ink, 0.62);
-    g.fillRoundedRect(248, 17, 30, 20, 5);
-    g.fillRoundedRect(284, 17, 30, 20, 5);
-    g.lineStyle(1, COLORS.cream, 0.12);
-    g.strokeRoundedRect(248, 17, 30, 20, 5);
-    g.strokeRoundedRect(284, 17, 30, 20, 5);
+    const biome = BIOMES[this.model.chapter] ?? BIOMES[0];
+    g.fillStyle(biome.terrainDark, 0.82);
+    g.fillRect(248, 17, 30, 20);
+    g.fillRect(284, 17, 30, 20);
+    g.lineStyle(1, biome.surface, 0.7);
+    g.strokeRect(248, 17, 30, 20);
+    g.strokeRect(284, 17, 30, 20);
     g.fillStyle(COLORS.cream, 0.9);
     if (paused) {
       g.fillTriangle(259, 22, 259, 32, 269, 27);
@@ -919,6 +929,21 @@ export class AviaryScene extends Phaser.Scene {
       g.lineStyle(1, COLORS.cream, 0.9);
       g.strokeCircle(300, 27, 5);
     }
+  }
+
+  private drawPixelPanel(g: Phaser.GameObjects.Graphics, x: number, y: number, width: number, height: number, chapter: number): void {
+    const biome = BIOMES[chapter] ?? BIOMES[0];
+    g.fillStyle(biome.terrainDark, 0.92);
+    g.fillRect(x, y, width, height);
+    g.lineStyle(3, biome.terrain, 1);
+    g.strokeRect(x + 1, y + 1, width - 2, height - 2);
+    g.lineStyle(1, biome.surface, 0.85);
+    g.strokeRect(x + 4, y + 4, width - 8, height - 8);
+    g.fillStyle(biome.glow, 0.8);
+    g.fillRect(x + 6, y + 6, 3, 3);
+    g.fillRect(x + width - 9, y + 6, 3, 3);
+    g.fillRect(x + 6, y + height - 9, 3, 3);
+    g.fillRect(x + width - 9, y + height - 9, 3, 3);
   }
 
   private drawChain(g: Phaser.GameObjects.Graphics): void {
