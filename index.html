@@ -1,13 +1,129 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" class="game-loading">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#211a1d" />
     <meta name="description" content="birdddddd — Flappy Bird meets VVVVVV in a one-button gravity arcade game." />
     <title>birdddddd</title>
+    <style>
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        overflow: hidden;
+        background: #211a1d;
+      }
+
+      .game-loading #game-content {
+        visibility: hidden;
+      }
+
+      #loading-screen {
+        position: fixed;
+        inset: 0;
+        z-index: 100;
+        display: grid;
+        place-content: center;
+        justify-items: center;
+        gap: 16px;
+        background: #17182b;
+        color: #f6e7c1;
+        font-family: ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, monospace;
+        text-align: center;
+        opacity: 1;
+        visibility: visible;
+        transition: opacity 120ms linear, visibility 0s linear 120ms;
+      }
+
+      .game-ready #loading-screen,
+      .mobile-portrait-gate #loading-screen {
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+      }
+
+      .loading-bird {
+        position: relative;
+        width: 40px;
+        height: 32px;
+        background: #f2b544;
+        box-shadow: inset -6px -6px 0 #b66e32, 5px 5px 0 rgba(8, 9, 19, 0.42);
+        animation: loading-bob 700ms steps(2, end) infinite;
+      }
+
+      .loading-bird::before {
+        content: "";
+        position: absolute;
+        top: 7px;
+        right: -8px;
+        width: 12px;
+        height: 9px;
+        background: #f6e7c1;
+        box-shadow: 4px 3px 0 #f2b544;
+      }
+
+      .loading-bird::after {
+        content: "";
+        position: absolute;
+        top: 4px;
+        right: 5px;
+        width: 7px;
+        height: 7px;
+        background: #17182b;
+        box-shadow: -24px 18px 0 -1px #f6e7c1, -15px 18px 0 -1px #f6e7c1;
+      }
+
+      .loading-label {
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 0.16em;
+      }
+
+      .loading-track {
+        width: 128px;
+        height: 8px;
+        padding: 2px;
+        border: 2px solid #f6e7c1;
+      }
+
+      .loading-fill {
+        display: block;
+        width: 36%;
+        height: 100%;
+        background: #4e9b91;
+        animation: loading-fill 900ms steps(5, end) infinite;
+      }
+
+      @keyframes loading-bob {
+        50% { transform: translateY(-4px); }
+      }
+
+      @keyframes loading-fill {
+        0% { width: 16%; }
+        50% { width: 82%; }
+        100% { width: 16%; }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .loading-bird,
+        .loading-fill {
+          animation: none;
+        }
+
+        .loading-fill {
+          width: 62%;
+        }
+      }
+    </style>
   </head>
   <body>
+    <aside id="loading-screen" role="status" aria-live="polite" aria-label="Loading birdddddd">
+      <span class="loading-bird" aria-hidden="true"></span>
+      <strong class="loading-label">LOADING THE WILDS…</strong>
+      <span class="loading-track" aria-hidden="true"><span class="loading-fill"></span></span>
+    </aside>
     <main class="page-shell" id="game-content">
       <section class="game-shell" aria-label="birdddddd game">
         <div id="game" aria-label="Game canvas">

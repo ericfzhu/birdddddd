@@ -4,8 +4,35 @@ import "./styles.css";
 
 const gameContent = document.querySelector<HTMLElement>("#game-content");
 const rotatePrompt = document.querySelector<HTMLElement>("#rotate-prompt");
+const loadingScreen = document.querySelector<HTMLElement>("#loading-screen");
 const coarsePointer = window.matchMedia("(pointer: coarse)");
 let gameLoadPromise: Promise<void> | undefined;
+let sceneReady = false;
+let revealPromise: Promise<void> | undefined;
+
+function afterBrowserPaint(): Promise<void> {
+  return new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+}
+
+function revealLoadedGame(): Promise<void> {
+  if (!sceneReady || revealPromise) return revealPromise ?? Promise.resolve();
+  revealPromise = Promise.all([
+    document.fonts?.load('700 18px "Pixelify Sans"') ?? Promise.resolve([]),
+    document.fonts?.ready ?? Promise.resolve(),
+  ])
+    .then(() => afterBrowserPaint())
+    .then(() => {
+      document.documentElement.classList.remove("game-loading");
+      document.documentElement.classList.add("game-ready");
+      loadingScreen?.setAttribute("aria-hidden", "true");
+    });
+  return revealPromise;
+}
+
+window.addEventListener("birdddddd:scene-ready", () => {
+  sceneReady = true;
+  void revealLoadedGame();
+}, { once: true });
 
 function viewportSignals(): MobileViewportSignals {
   const viewport = window.visualViewport;
@@ -82,6 +109,7 @@ function syncOrientationGate(): void {
 window.__birddddddOrientationState = () => JSON.stringify({
   blocked: shouldGateForPortrait(viewportSignals()),
   gameLoaded: Boolean(window.__birdddddd),
+  gameReady: document.documentElement.classList.contains("game-ready"),
   viewport: viewportSignals(),
 });
 

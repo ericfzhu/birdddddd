@@ -150,6 +150,7 @@ export class AviaryScene extends Phaser.Scene {
     this.bindInput();
     this.installTestHooks();
     this.renderFrame();
+    window.dispatchEvent(new Event("birdddddd:scene-ready"));
   }
 
   update(_time: number, deltaMs: number): void {
