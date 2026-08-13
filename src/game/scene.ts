@@ -119,7 +119,7 @@ export class AviaryScene extends Phaser.Scene {
     this.ui = this.add.graphics();
 
     this.titleText = new HudText("hud-title", 64);
-    this.promptText = new HudText("hud-prompt", 123);
+    this.promptText = new HudText("hud-prompt", 108);
     this.scoreText = new HudText("hud-score", 18);
     this.chapterText = new HudText("hud-chapter", 49);
     this.resultText = new HudText("hud-result", 73);
@@ -941,15 +941,19 @@ export class AviaryScene extends Phaser.Scene {
       g.fillRect(257, 22, 3, 10);
       g.fillRect(266, 22, 3, 10);
     }
+    g.fillRect(291, 25, 5, 5);
+    g.fillTriangle(296, 25, 301, 21, 301, 34);
     if (this.settings.muted) {
-      g.fillRect(291, 25, 5, 5);
       g.lineStyle(2, COLORS.coral, 1);
-      g.lineBetween(300, 22, 308, 32);
+      g.lineBetween(303, 22, 310, 33);
     } else {
-      g.fillRect(291, 25, 5, 5);
-      g.fillTriangle(296, 25, 301, 21, 301, 34);
       g.lineStyle(1, COLORS.cream, 0.9);
-      g.strokeCircle(300, 27, 5);
+      g.lineBetween(303, 24, 305, 26);
+      g.lineBetween(305, 26, 305, 29);
+      g.lineBetween(305, 29, 303, 31);
+      g.lineBetween(306, 21, 309, 24);
+      g.lineBetween(309, 24, 309, 31);
+      g.lineBetween(309, 31, 306, 34);
     }
   }
 
