@@ -63,7 +63,7 @@ No cross-origin API or CORS permission is required for the iframe. Best score, m
 - 320×180 logical canvas with nearest-neighbour responsive scaling
 - Deterministic 60 Hz custom physics with momentum-preserving gravity flips
 - Twenty-four authored chunks across four escalating chapters
-- Four complete biome art systems: Verdant Wilds, Sunken Dunes, Violet Chasm, and Ashen Depths
+- Four continuous tile-world biomes: Verdant Wilds, Sunken Dunes, Violet Chasm, and Ashen Depths, with rooted vegetation, layered terrain, embedded materials, and parallax horizons
 - Rising and falling tunnel profiles with persistent slope/pillar pushback and left-edge failure
 - Compatibility metadata and discrete physics traversal checks for chunk transitions
 - Gate scoring, optional three-feather bonus chains, local best-score/settings persistence
