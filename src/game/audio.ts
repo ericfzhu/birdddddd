@@ -30,12 +30,17 @@ export class AudioDirector {
     if (!this.context || this.muted || !playing || this.context.state !== "running") return;
     const now = this.context.currentTime;
     if (this.nextMusicAt < now - 0.4) this.nextMusicAt = now;
-    const interval = [0.23, 0.21, 0.19, 0.17][chapter] ?? 0.23;
+    const interval = [0.23, 0.225, 0.21, 0.205, 0.19, 0.185, 0.18, 0.17, 0.165][chapter] ?? 0.23;
     const palettes = [
       [220, 277, 330, 415],
+      [196, 233, 294, 349],
       [196, 247, 294, 370],
+      [208, 262, 330, 392],
       [174, 220, 262, 330],
+      [147, 185, 220, 277],
+      [165, 196, 247, 294],
       [165, 208, 247, 311],
+      [139, 175, 208, 262],
     ];
     const notes = palettes[chapter] ?? palettes[0];
     while (this.nextMusicAt < now + 0.12) {

@@ -52,7 +52,17 @@ export interface ChunkDefinition {
   hazards: HazardSpec[];
   feathers: FeatherSpec[];
   tunnel?: TunnelPoint[];
-  decoration: "forest" | "desert" | "blight" | "depths" | "passage";
+  decoration:
+    | "forest"
+    | "jungle"
+    | "desert"
+    | "marble"
+    | "blight"
+    | "corruption"
+    | "minecart"
+    | "depths"
+    | "underworld"
+    | "passage";
   transition?: {
     from: number;
     to: number;

@@ -87,17 +87,27 @@ describe("birdddddd model", () => {
   });
 
   it("contains exactly six validated chunks per chapter", () => {
-    expect(CHUNKS).toHaveLength(24);
+    expect(CHUNKS).toHaveLength(CHAPTERS.length * 6);
     expect(validateChunkLibrary()).toEqual([]);
-    for (let chapter = 0; chapter < 4; chapter += 1) {
+    for (let chapter = 0; chapter < CHAPTERS.length; chapter += 1) {
       expect(CHUNKS.filter((chunk) => chunk.chapter === chapter)).toHaveLength(6);
     }
   });
 
   it("keeps each chapter tied to a distinct biome art family", () => {
-    expect(CHAPTERS.map((chapter) => chapter.name)).toEqual(["VERDANT WILDS", "SUNKEN DUNES", "VIOLET CHASM", "ASHEN DEPTHS"]);
-    expect(new Set(BIOMES.map((biome) => biome.sky)).size).toBe(4);
-    const decorations = ["forest", "desert", "blight", "depths"] as const;
+    expect(CHAPTERS.map((chapter) => chapter.name)).toEqual([
+      "VERDANT WILDS",
+      "UNDERGROUND JUNGLE",
+      "SUNKEN DUNES",
+      "MARBLE CAVE",
+      "VIOLET CHASM",
+      "UNDERGROUND CORRUPTION",
+      "ABANDONED MINECART",
+      "ASHEN DEPTHS",
+      "UNDERWORLD",
+    ]);
+    expect(new Set(BIOMES.map((biome) => biome.sky)).size).toBe(CHAPTERS.length);
+    const decorations = ["forest", "jungle", "desert", "marble", "blight", "corruption", "minecart", "depths", "underworld"] as const;
     for (let chapter = 0; chapter < decorations.length; chapter += 1) {
       expect(new Set(CHUNKS.filter((chunk) => chunk.chapter === chapter).map((chunk) => chunk.decoration))).toEqual(new Set([decorations[chapter]]));
     }
@@ -262,15 +272,15 @@ describe("birdddddd model", () => {
   it("inserts a safe non-scoring passage when a chapter threshold is crossed", () => {
     const model = new GameModel(91);
     model.mode = "playing";
-    model.gates = 9;
-    model.score = 9;
+    model.gates = CHAPTERS[1].at - 1;
+    model.score = CHAPTERS[1].at - 1;
     model.distance = 98;
     model.chunks = [activate(safeChunk())];
 
     model.step();
 
     expect(model.chapter).toBe(1);
-    expect(model.gates).toBe(10);
+    expect(model.gates).toBe(CHAPTERS[1].at);
     const passage = model.chunks.find((active) => active.definition.transition);
     expect(passage?.definition.id).toBe(TRANSITION_CHUNKS[0]?.id);
     expect(model.chapterTransition()?.progress).toBe(0);
@@ -282,8 +292,8 @@ describe("birdddddd model", () => {
 
     model.distance = passage.startX - PLAYER_X + passage.definition.width + 1;
     model.step();
-    expect(model.gates).toBe(10);
-    expect(model.score).toBe(10);
+    expect(model.gates).toBe(CHAPTERS[1].at);
+    expect(model.score).toBe(CHAPTERS[1].at);
   });
 
   it("declares at least one compatible successor for every chunk", () => {

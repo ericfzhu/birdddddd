@@ -36,6 +36,20 @@ interface StoredSettings {
 
 const STORAGE_KEY = "birdddddd:v1";
 const LEGACY_STORAGE_KEY = "impossible-aviary:v1";
+const BACKGROUND_ASSETS = [
+  "biome-forest-background-runtime.png",
+  "biome-underground-jungle-background-runtime.png",
+  "biome-desert-background-runtime.png",
+  "biome-marble-cave-background-runtime.png",
+  "biome-violet-background-runtime.png",
+  "biome-underground-corruption-background-runtime.png",
+  "biome-abandoned-minecart-background-runtime.png",
+  "biome-ashen-background-runtime.png",
+  "biome-underworld-background-runtime.png",
+] as const;
+const NEW_ART_CHAPTERS = [1, 3, 5, 6, 8] as const;
+const NEW_ART_SLUGS = ["underground-jungle", "marble-cave", "underground-corruption", "abandoned-minecart", "underworld"] as const;
+const LEGACY_ATLAS_CHAPTER = new Map<number, number>([[0, 0], [2, 1], [4, 2], [7, 3]]);
 
 export class AviaryScene extends Phaser.Scene {
   model!: GameModel;
@@ -76,10 +90,7 @@ export class AviaryScene extends Phaser.Scene {
   }
 
   preload(): void {
-    this.load.image("biome-background-0", "/assets/biome-forest-background-runtime.png");
-    this.load.image("biome-background-1", "/assets/biome-desert-background-runtime.png");
-    this.load.image("biome-background-2", "/assets/biome-violet-background-runtime.png");
-    this.load.image("biome-background-3", "/assets/biome-ashen-background-runtime.png");
+    BACKGROUND_ASSETS.forEach((asset, chapter) => this.load.image(`biome-background-${chapter}`, `/assets/${asset}`));
     this.load.spritesheet("biome-props-atlas", "/assets/biome-props-atlas-runtime.png", {
       frameWidth: 128,
       frameHeight: 128,
@@ -88,19 +99,25 @@ export class AviaryScene extends Phaser.Scene {
       frameWidth: 16,
       frameHeight: 16,
     });
+    NEW_ART_CHAPTERS.forEach((chapter, index) => {
+      const slug = NEW_ART_SLUGS[index];
+      this.load.spritesheet(`biome-terrain-${chapter}`, `/assets/biome-${slug}-terrain-runtime.png`, { frameWidth: 16, frameHeight: 16 });
+      this.load.image(`biome-prop-${chapter}`, `/assets/biome-${slug}-prop-runtime.png`);
+    });
   }
 
   create(): void {
     this.settings = this.loadSettings();
     const query = new URLSearchParams(window.location.search);
     const requestedSeed = Number(query.get("seed"));
-    const previewChapter = Number(query.get("previewChapter"));
+    const requestedChapter = query.get("previewChapter");
+    const previewChapter = requestedChapter === null ? (import.meta.env.DEV ? 2 : 0) : Number(requestedChapter);
     const seed = Number.isFinite(requestedSeed) && requestedSeed > 0 ? requestedSeed >>> 0 : (Date.now() ^ 0x51a7e) >>> 0;
     this.model = new GameModel(seed, this.settings.bestScore, Number.isFinite(previewChapter) ? previewChapter : 0);
     this.model.reducedMotion = this.settings.reducedMotion;
 
     this.background = this.add.graphics();
-    for (let chapter = 0; chapter < 4; chapter += 1) {
+    for (let chapter = 0; chapter < CHAPTERS.length; chapter += 1) {
       const image = this.add.image(0, 0, `biome-background-${chapter}`).setOrigin(0, 0).setDisplaySize(VIEW_WIDTH, VIEW_HEIGHT).setVisible(false);
       this.biomeBackgrounds.push(image);
     }
@@ -460,13 +477,15 @@ export class AviaryScene extends Phaser.Scene {
         const sourceHash = Math.abs(worldColumn * 73 + layer * 151 + chapter * 997);
         const sourceColumn = sourceHash % samplesPerAxis;
         const sourceRow = chapter === 0 && layer === 0 ? 0 : Math.floor(sourceHash / samplesPerAxis) % samplesPerAxis;
-        const atlasColumn = (chapter % 2) * samplesPerAxis + sourceColumn;
-        const atlasRow = Math.floor(chapter / 2) * samplesPerAxis + sourceRow;
-        const textureFrame = atlasRow * 16 + atlasColumn;
+        const legacyChapter = LEGACY_ATLAS_CHAPTER.get(chapter);
+        const textureKey = legacyChapter === undefined ? `biome-terrain-${chapter}` : "biome-terrain-atlas";
+        const textureFrame = legacyChapter === undefined
+          ? sourceRow * samplesPerAxis + sourceColumn
+          : (Math.floor(legacyChapter / 2) * samplesPerAxis + sourceRow) * 16 + (legacyChapter % 2) * samplesPerAxis + sourceColumn;
         const tile = this.terrainTilePool[poolIndex++];
         if (!tile) return false;
         tile
-          .setFrame(textureFrame)
+          .setTexture(textureKey, textureFrame)
           .setCrop()
           .setDisplaySize(tileSize + 0.25, tileSize + 0.25)
           .setPosition(Math.round(x), Math.round(top ? point.ceiling - (layer + 1) * tileSize : point.floor + layer * tileSize))
@@ -482,8 +501,8 @@ export class AviaryScene extends Phaser.Scene {
   private drawTunnelRails(g: Phaser.GameObjects.Graphics, tunnel: VisibleTunnelPoint[], chapter: number, alpha: number): void {
     if (alpha <= 0 || tunnel.length < 2) return;
     const biome = BIOMES[chapter] ?? BIOMES[0];
-    const thickness = chapter === 2 ? 4 : 3;
-    const spacing = [12, 16, 14, 16][chapter] ?? 16;
+    const thickness = chapter === 4 || chapter === 8 ? 4 : 3;
+    const spacing = [12, 14, 16, 15, 14, 13, 12, 16, 12][chapter] ?? 16;
     g.lineStyle(thickness, biome.surface, alpha);
     for (let index = 1; index < tunnel.length; index += 1) {
       const previous = tunnel[index - 1];
@@ -510,14 +529,14 @@ export class AviaryScene extends Phaser.Scene {
         g.fillTriangle(x + 6, point.ceiling, x + 8, point.ceiling + 4, x + 10, point.ceiling);
         g.fillStyle(biome.terrainDark, 0.58 * alpha);
         g.fillRect(x + 5, point.floor + 5, 2, 2);
-      } else if (chapter === 1) {
+      } else if (chapter === 1 || chapter === 3) {
         g.fillStyle(biome.accent, 0.78 * alpha);
         g.fillRect(x, point.ceiling - 2, 7, 2);
         g.fillRect(x + 8, point.floor, 7, 2);
         g.fillStyle(biome.terrain, 0.85 * alpha);
         g.fillRect(x + 3, point.ceiling - 5, 3, 2);
         g.fillRect(x + 10, point.floor + 4, 3, 2);
-      } else if (chapter === 2) {
+      } else if (chapter === 2 || chapter === 4 || chapter === 5) {
         g.fillStyle(biome.accent, 0.9 * alpha);
         g.fillTriangle(x, point.ceiling, x + 3, point.ceiling - 5, x + 6, point.ceiling);
         g.fillTriangle(x + 7, point.floor, x + 10, point.floor + 5, x + 13, point.floor);
@@ -550,10 +569,12 @@ export class AviaryScene extends Phaser.Scene {
       const prop = this.propPool[propIndex++];
       if (!prop) return;
       const chapter = chunk.definition.chapter;
-      const sizes = [52, 45, 48, 45] as const;
+      const sizes = [52, 50, 45, 48, 48, 48, 54, 45, 50] as const;
       const size = sizes[chapter] ?? 45;
+      const legacyChapter = LEGACY_ATLAS_CHAPTER.get(chapter);
+      if (legacyChapter === undefined) prop.setTexture(`biome-prop-${chapter}`);
+      else prop.setTexture("biome-props-atlas", legacyChapter);
       prop
-        .setFrame(chapter)
         .setDisplaySize(size, size)
         .setPosition(Math.round(x), Math.round(point.floor + 1))
         .setAlpha(0.92)
@@ -616,6 +637,15 @@ export class AviaryScene extends Phaser.Scene {
       return;
     }
     if (rect.chapter === 1) {
+      g.fillStyle(biome.terrain, 1);
+      g.fillRect(rect.x, rect.y, rect.w, rect.h);
+      g.fillStyle(biome.surface, 1);
+      g.fillRect(rect.x, rect.y, rect.w, 2);
+      g.fillStyle(biome.accent, 0.8);
+      for (let x = rect.x + 3; x < rect.x + rect.w - 2; x += 8) g.fillRect(x, rect.y + 2, 2, Math.min(4, rect.h - 2));
+      return;
+    }
+    if (rect.chapter === 2) {
       g.fillStyle(biome.surface, 1);
       g.fillRect(rect.x, rect.y, rect.w, rect.h);
       g.fillStyle(biome.accent, 0.9);
@@ -624,7 +654,7 @@ export class AviaryScene extends Phaser.Scene {
       for (let x = rect.x + 3; x < rect.x + rect.w - 2; x += 9) g.fillRect(x, rect.y + Math.max(2, rect.h - 3), 6, 2);
       return;
     }
-    if (rect.chapter === 2) {
+    if (rect.chapter === 4 || rect.chapter === 5) {
       g.fillStyle(biome.terrain, 1);
       g.fillRect(rect.x, rect.y, rect.w, rect.h);
       g.fillStyle(biome.surface, 1);
@@ -768,7 +798,7 @@ export class AviaryScene extends Phaser.Scene {
       const biome = BIOMES[rect.chapter] ?? BIOMES[0];
       g.fillStyle(biome.terrainDark, 1);
       g.fillRect(rect.x + 2, rect.y + 2, rect.w, rect.h);
-      g.fillStyle(rect.chapter === 2 ? biome.surface : biome.terrain, 1);
+      g.fillStyle(rect.chapter === 4 ? biome.surface : biome.terrain, 1);
       g.fillRect(rect.x, rect.y, rect.w, rect.h);
       g.fillStyle(biome.danger, 1);
       for (let y = rect.y + 5; y < rect.y + rect.h - 3; y += 9) g.fillRect(rect.x + 2, y, rect.w - 4, 3);
