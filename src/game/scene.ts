@@ -11,6 +11,7 @@ import {
   PLAYER_HEIGHT,
   PLAYER_WIDTH,
   PLAYER_X,
+  TERRAIN_SPIKE_MIN_SCALE,
   VIEW_HEIGHT,
   VIEW_WIDTH,
 } from "./constants";
@@ -708,6 +709,13 @@ export class AviaryScene extends Phaser.Scene {
     );
   }
 
+  private terrainSpikeScale(x: number, index: number): number {
+    const pattern = [1, 0.78, 0.9, TERRAIN_SPIKE_MIN_SCALE, 0.84] as const;
+    const worldCell = Math.floor((this.model.distance + x) / 8);
+    const patternIndex = Math.abs(worldCell + index * 2) % pattern.length;
+    return pattern[patternIndex] ?? 1;
+  }
+
   private drawRectEntity(g: Phaser.GameObjects.Graphics, rect: VisibleRect): void {
     if (rect.kind === "solid") {
       if (rect.detail === "cage") {
@@ -725,7 +733,8 @@ export class AviaryScene extends Phaser.Scene {
       const unit = rect.w / count;
       for (let index = 0; index < count; index += 1) {
         const left = rect.x + index * unit;
-        this.drawTerrainSpike(g, left, left + unit, rect.h, ceiling);
+        const depth = rect.h * this.terrainSpikeScale(left, index);
+        this.drawTerrainSpike(g, left, left + unit, depth, ceiling);
       }
       g.fillStyle(biome.terrainDark, 0.8);
       this.drawTerrainPlate(g, rect.x, rect.x + rect.w, ceiling, 3);
@@ -742,7 +751,7 @@ export class AviaryScene extends Phaser.Scene {
       let index = 0;
       while (cursor < rect.x + rect.w) {
         const width = Math.min(widths[index % widths.length] ?? 8, rect.x + rect.w - cursor);
-        const depth = rect.h - 3 - (index % 2) * 4;
+        const depth = rect.h * this.terrainSpikeScale(cursor, index + 1);
         this.drawTerrainSpike(g, cursor, cursor + width, depth, ceiling);
         cursor += width;
         index += 1;
@@ -795,10 +804,21 @@ export class AviaryScene extends Phaser.Scene {
 
   private drawFeather(g: Phaser.GameObjects.Graphics, x: number, y: number, scale: number): void {
     const bob = Math.sin(this.uiTime * 5 + x * 0.04) * 2;
+    const centerY = y + bob;
+    const glowPulse = this.settings.reducedMotion ? 0.5 : (Math.sin(this.uiTime * 4.5 + x * 0.025) + 1) / 2;
+    g.fillStyle(COLORS.cream, 0.07 + glowPulse * 0.035);
+    g.fillCircle(x, centerY, (8 + glowPulse) * scale);
+    g.fillStyle(COLORS.yolk, 0.12 + glowPulse * 0.04);
+    g.fillCircle(x, centerY, (5.5 + glowPulse * 0.5) * scale);
+    g.fillStyle(COLORS.ink, 0.52);
+    g.fillTriangle(x - 5 * scale, centerY, x + 4.5 * scale, centerY - 5 * scale, x + 2.5 * scale, centerY + 6 * scale);
     g.fillStyle(COLORS.yolk, 1);
-    g.fillTriangle(x - 4 * scale, y + bob, x + 4 * scale, y - 4 * scale + bob, x + 2 * scale, y + 5 * scale + bob);
+    g.fillTriangle(x - 4 * scale, centerY, x + 4 * scale, centerY - 4 * scale, x + 2 * scale, centerY + 5 * scale);
     g.lineStyle(Math.max(1, scale), COLORS.cream, 0.85);
-    g.lineBetween(x - 2 * scale, y + 3 * scale + bob, x + 3 * scale, y - 2 * scale + bob);
+    g.lineBetween(x - 2 * scale, centerY + 3 * scale, x + 3 * scale, centerY - 2 * scale);
+    g.fillStyle(COLORS.cream, 0.72 + glowPulse * 0.2);
+    g.fillRect(Math.round(x - 4 * scale), Math.round(centerY - 5 * scale), Math.max(1, scale), 3 * scale);
+    g.fillRect(Math.round(x - 5 * scale), Math.round(centerY - 4 * scale), 3 * scale, Math.max(1, scale));
   }
 
   private drawBird(g: Phaser.GameObjects.Graphics): void {

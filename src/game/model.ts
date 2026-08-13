@@ -12,6 +12,7 @@ import {
   PLAYER_WIDTH,
   PLAYER_X,
   RESTART_DELAY_SECONDS,
+  TERRAIN_SPIKE_MIN_SCALE,
   VIEW_WIDTH,
   chapterForGates,
 } from "./constants";
@@ -413,7 +414,17 @@ export class GameModel {
       const origin = active.startX - this.distance;
       for (const hazard of active.definition.hazards) {
         const tunnelOffset = tunnelOffsetAt(active.definition, hazard.x + hazard.w / 2);
-        const rect = { x: origin + hazard.x, y: hazard.y + tunnelOffset + this.motionOffset(hazard), w: hazard.w, h: hazard.h };
+        const motionOffset = this.motionOffset(hazard);
+        const terrainSpike = hazard.kind === "thorns" || hazard.kind === "barbs";
+        const collisionHeight = terrainSpike ? hazard.h * TERRAIN_SPIKE_MIN_SCALE : hazard.h;
+        const ceilingSpike = hazard.attachment === "ceiling" || hazard.flipY === true;
+        const collisionInsetY = terrainSpike && !ceilingSpike ? hazard.h - collisionHeight : 0;
+        const rect = {
+          x: origin + hazard.x,
+          y: hazard.y + tunnelOffset + motionOffset + collisionInsetY,
+          w: hazard.w,
+          h: collisionHeight,
+        };
         if (overlaps(playerRect, rect)) {
           this.die();
           return;

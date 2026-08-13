@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { BIOMES, CHAPTERS, FIXED_STEP_SECONDS, FLIP_DEBOUNCE_SECONDS, PLAY_TOP, PLAYER_HEIGHT, PLAYER_MIN_X, PLAYER_X } from "../src/game/constants";
+import { BIOMES, CHAPTERS, FIXED_STEP_SECONDS, FLIP_DEBOUNCE_SECONDS, PLAY_BOTTOM, PLAY_TOP, PLAYER_HEIGHT, PLAYER_MIN_X, PLAYER_X } from "../src/game/constants";
 import { CHUNKS, TRANSITION_CHUNKS, envelopesCompatible, tunnelOffsetAt, validateChunkLibrary } from "../src/game/chunks";
 import { GameModel } from "../src/game/model";
 import { canTraverseChunk } from "../src/game/solver";
@@ -236,6 +236,25 @@ describe("birdddddd model", () => {
     };
     model.chunks = [activate(spinnerChunk)];
     model.mode = "playing";
+    model.step();
+    expect(model.mode).toBe("dead");
+  });
+
+  it("keeps variable floor spikes fair by colliding at their shortest visible depth", () => {
+    const spikeChunk: ChunkDefinition = {
+      ...safeChunk(),
+      hazards: [{ x: PLAYER_X - 6, y: PLAY_BOTTOM - 20, w: 12, h: 20, kind: "thorns", attachment: "floor" }],
+    };
+    const model = new GameModel(82);
+    model.chunks = [activate(spikeChunk)];
+    model.mode = "playing";
+    model.gravity = -1;
+    model.playerY = 146;
+
+    model.step();
+    expect(model.mode).toBe("playing");
+
+    model.playerY = 154;
     model.step();
     expect(model.mode).toBe("dead");
   });

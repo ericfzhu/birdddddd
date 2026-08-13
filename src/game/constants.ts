@@ -7,6 +7,7 @@ export const PLAYER_MIN_X = 10;
 export const PLAYER_WIDTH = 14;
 export const PLAYER_HEIGHT = 12;
 export const HITBOX_INSET = 2;
+export const TERRAIN_SPIKE_MIN_SCALE = 0.7;
 export const GRAVITY_ACCELERATION = 420;
 export const MAX_VERTICAL_SPEED = 155;
 export const FLIP_DEBOUNCE_SECONDS = 0.08;
