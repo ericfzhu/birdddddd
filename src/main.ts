@@ -24,11 +24,11 @@ function setPortraitGate(blocked: boolean): void {
 }
 
 function startGame(): Promise<void> {
-  if (window.__impossibleAviary) return Promise.resolve();
+  if (window.__birdddddd) return Promise.resolve();
   if (gameLoadPromise) return gameLoadPromise;
   gameLoadPromise = Promise.all([import("phaser"), import("./game/scene")])
     .then(([{ default: Phaser }, { AviaryScene }]) => {
-      if (shouldGateForPortrait(viewportSignals()) || window.__impossibleAviary) return;
+      if (shouldGateForPortrait(viewportSignals()) || window.__birdddddd) return;
       const config: Phaser.Types.Core.GameConfig = {
         type: Phaser.CANVAS,
         parent: "game",
@@ -56,7 +56,7 @@ function startGame(): Promise<void> {
         },
         scene: [AviaryScene],
       };
-      window.__impossibleAviary = new Phaser.Game(config);
+      window.__birdddddd = new Phaser.Game(config);
     })
     .finally(() => {
       gameLoadPromise = undefined;
@@ -68,20 +68,20 @@ function syncOrientationGate(): void {
   const blocked = shouldGateForPortrait(viewportSignals());
   setPortraitGate(blocked);
   if (blocked) {
-    window.__impossibleAviary?.loop.sleep();
+    window.__birdddddd?.loop.sleep();
     return;
   }
-  if (window.__impossibleAviary) {
-    window.__impossibleAviary.loop.wake();
-    window.__impossibleAviary.scale.refresh();
+  if (window.__birdddddd) {
+    window.__birdddddd.loop.wake();
+    window.__birdddddd.scale.refresh();
   } else {
     void startGame();
   }
 }
 
-window.__aviaryOrientationState = () => JSON.stringify({
+window.__birddddddOrientationState = () => JSON.stringify({
   blocked: shouldGateForPortrait(viewportSignals()),
-  gameLoaded: Boolean(window.__impossibleAviary),
+  gameLoaded: Boolean(window.__birdddddd),
   viewport: viewportSignals(),
 });
 

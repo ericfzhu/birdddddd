@@ -1,6 +1,6 @@
-# Impossible Aviary
+# birdddddd
 
-A one-button endless arcade game about a bedraggled fledgling escaping a strange mechanical aviary. Reverse gravity without losing momentum, thread handcrafted cage mechanisms, and collect feather chains for bonus points.
+A one-button endless arcade game combining Flappy Bird's rapid obstacle loop with VVVVVV's gravity reversal. Guide a bedraggled fledgling through a strange mechanical aviary, reverse gravity without losing momentum, and collect feather chains for bonus points.
 
 ## Play
 
@@ -32,20 +32,20 @@ Open `http://localhost:5173`. Add `?seed=123` to reproduce a particular chunk se
 
 ## Cloudflare deployment and embedding
 
-The production build is configured as a Cloudflare Worker with Static Assets. Deploy it with:
+The production build is configured for a Cloudflare Pages project named `birdddddd`. Deploy it with:
 
 ```sh
 yarn deploy
 ```
 
-`wrangler.jsonc` uploads `dist`, while `public/_headers` allows the game to be framed by `ericfzhu.com`, its `www` hostname, its Cloudflare Pages preview hostnames, and local development servers. Other websites cannot frame the deployed game.
+The deploy script uploads `dist` directly to Pages. `public/_headers` allows the game to be framed by `ericfzhu.com`, its `www` hostname, its Cloudflare Pages preview hostnames, and local development servers. Other websites cannot frame the deployed game.
 
-After assigning the Worker a public hostname, embed that single deployment in the main website:
+After assigning the Pages project a public hostname, embed that single deployment in the main website:
 
 ```tsx
 <iframe
   src="https://your-game-hostname.example"
-  title="Impossible Aviary"
+  title="birdddddd"
   allow="fullscreen; autoplay"
   allowFullScreen
   className="h-full w-full border-0"

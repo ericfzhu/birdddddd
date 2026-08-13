@@ -30,7 +30,8 @@ interface StoredSettings {
   reducedMotion: boolean;
 }
 
-const STORAGE_KEY = "impossible-aviary:v1";
+const STORAGE_KEY = "birdddddd:v1";
+const LEGACY_STORAGE_KEY = "impossible-aviary:v1";
 const textStyle = (size: number, color = "#f6e7c1"): Phaser.Types.GameObjects.Text.TextStyle => ({
   fontFamily: '"Courier New", ui-monospace, monospace',
   fontSize: `${size}px`,
@@ -84,7 +85,7 @@ export class AviaryScene extends Phaser.Scene {
     this.effects = this.add.graphics();
     this.ui = this.add.graphics();
 
-    this.titleText = this.add.text(VIEW_WIDTH / 2, 57, "IMPOSSIBLE\nAVIARY", textStyle(18, "#fff9e9")).setOrigin(0.5);
+    this.titleText = this.add.text(VIEW_WIDTH / 2, 64, "BIRDDDDDD", textStyle(18, "#fff9e9")).setOrigin(0.5);
     this.promptText = this.add.text(VIEW_WIDTH / 2, 123, "TAP TO TURN GRAVITY", textStyle(8)).setOrigin(0.5);
     this.scoreText = this.add.text(VIEW_WIDTH / 2, 18, "0", textStyle(15, "#fff9e9")).setOrigin(0.5, 0);
     this.chapterText = this.add.text(VIEW_WIDTH / 2, 49, "NURSERY WORKS", textStyle(7, "#f2b544")).setOrigin(0.5);
@@ -895,7 +896,8 @@ export class AviaryScene extends Phaser.Scene {
 
   private loadSettings(): StoredSettings {
     try {
-      const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "{}") as Partial<StoredSettings>;
+      const stored = localStorage.getItem(STORAGE_KEY) ?? localStorage.getItem(LEGACY_STORAGE_KEY) ?? "{}";
+      const parsed = JSON.parse(stored) as Partial<StoredSettings>;
       return {
         bestScore: Number.isFinite(parsed.bestScore) ? Math.max(0, Number(parsed.bestScore)) : 0,
         muted: Boolean(parsed.muted),

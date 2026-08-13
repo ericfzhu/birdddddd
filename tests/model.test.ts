@@ -24,7 +24,7 @@ const activate = (definition: ChunkDefinition, startX = 0): ActiveChunk => ({
   feathers: definition.feathers.map((feather) => ({ ...feather, collected: false, missed: false })),
 });
 
-describe("Impossible Aviary model", () => {
+describe("birdddddd model", () => {
   it("preserves velocity when gravity flips", () => {
     const model = new GameModel(123);
     model.action();
