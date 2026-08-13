@@ -5,6 +5,7 @@ import { GameModel } from "../src/game/model";
 import { canTraverseChunk } from "../src/game/solver";
 import { CAMERA_DEAD_ZONE_BOTTOM, CAMERA_DEAD_ZONE_TOP, cameraTargetY, trackCameraY } from "../src/game/camera";
 import { spikeClusterLayout, TERRAIN_SPIKE_POINT_WIDTH } from "../src/game/hazards";
+import { propLayout } from "../src/game/props";
 import type { ActiveChunk, ChunkDefinition } from "../src/game/types";
 
 const safeChunk = (feathers: Array<{ x: number; y: number }> = []): ChunkDefinition => ({
@@ -331,6 +332,21 @@ describe("birdddddd model", () => {
     expect(fourPoints).toHaveLength(4);
     expect(fivePoints).toHaveLength(5);
     expect([...threePoints, ...fourPoints, ...fivePoints].every((point) => point.width === TERRAIN_SPIKE_POINT_WIDTH)).toBe(true);
+  });
+
+  it("preserves prop aspect ratios and anchors measured visible bottoms", () => {
+    const minecart = propLayout(6);
+    expect(minecart.displayWidth).toBe(54);
+    expect(minecart.displayHeight).toBeCloseTo(35.86, 2);
+    expect(minecart.originY).toBe(1);
+
+    const marble = propLayout(3);
+    expect(marble.displayWidth).toBeCloseTo(45.75, 2);
+    expect(marble.displayHeight).toBe(48);
+    expect(marble.originY).toBeCloseTo(122 / 128, 5);
+
+    const corruption = propLayout(5);
+    expect(corruption.originY).toBeCloseTo(117 / 128, 5);
   });
 
   it("collides terrain spikes at their uniform visible height", () => {

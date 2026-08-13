@@ -15,6 +15,7 @@ import {
   VIEW_WIDTH,
 } from "./constants";
 import { spikeClusterLayout } from "./hazards";
+import { propLayout } from "./props";
 import { GameModel } from "./model";
 import { HudText } from "./hud";
 import type { GameEvent, VisibleRect, VisibleTunnelPoint } from "./types";
@@ -563,20 +564,26 @@ export class AviaryScene extends Phaser.Scene {
       const localX = 72 + (idValue % 38);
       const x = origin + localX;
       if (x < -36 || x > VIEW_WIDTH + 36) continue;
-      const point = this.tunnelPointAt(tunnel, x);
-      if (!point) continue;
       if (chunk.definition.decoration === "passage") continue;
       const prop = this.propPool[propIndex++];
       if (!prop) return;
       const chapter = chunk.definition.chapter;
-      const sizes = [52, 50, 45, 48, 48, 48, 54, 45, 50] as const;
-      const size = sizes[chapter] ?? 45;
+      const layout = propLayout(chapter);
+      let groundY = -Infinity;
+      const sampleCount = 6;
+      for (let index = 0; index <= sampleCount; index += 1) {
+        const sampleX = x + Phaser.Math.Linear(layout.visibleLeft, layout.visibleRight, index / sampleCount);
+        const sample = this.tunnelPointAt(tunnel, sampleX);
+        if (sample) groundY = Math.max(groundY, sample.floor);
+      }
+      if (!Number.isFinite(groundY)) continue;
       const legacyChapter = LEGACY_ATLAS_CHAPTER.get(chapter);
       if (legacyChapter === undefined) prop.setTexture(`biome-prop-${chapter}`);
       else prop.setTexture("biome-props-atlas", legacyChapter);
       prop
-        .setDisplaySize(size, size)
-        .setPosition(Math.round(x), Math.round(point.floor + 1))
+        .setOrigin(0.5, layout.originY)
+        .setDisplaySize(layout.displayWidth, layout.displayHeight)
+        .setPosition(Math.round(x), Math.ceil(groundY + 1))
         .setAlpha(0.92)
         .setVisible(true);
     }
