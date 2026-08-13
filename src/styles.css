@@ -1,7 +1,7 @@
 :root {
   color-scheme: dark;
   font-family: ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, monospace;
-  background: #0d0e1a;
+  background: #211a1d;
   color: #f6e7c1;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -24,7 +24,7 @@ body {
 
 body {
   min-height: 100%;
-  background: #17182b;
+  background: #211a1d;
 }
 
 button,
@@ -38,13 +38,13 @@ canvas {
   width: 100vw;
   height: 100dvh;
   overflow: hidden;
-  background: #17182b;
+  background: #211a1d;
 }
 
 .game-shell {
   width: 100%;
   height: 100%;
-  background: #17182b;
+  background: #211a1d;
 }
 
 #game {
@@ -142,10 +142,11 @@ canvas {
   gap: 14px;
   padding: max(32px, env(safe-area-inset-top)) max(32px, env(safe-area-inset-right)) max(32px, env(safe-area-inset-bottom)) max(32px, env(safe-area-inset-left));
   background:
-    repeating-linear-gradient(90deg, rgba(78, 155, 145, 0.11) 0 2px, transparent 2px 32px),
-    repeating-linear-gradient(0deg, rgba(78, 155, 145, 0.08) 0 2px, transparent 2px 32px),
-    #17182b;
-  color: #f6e7c1;
+    radial-gradient(circle at 18% 84%, #53793f 0 6%, transparent 6.5%),
+    radial-gradient(circle at 74% 78%, #436636 0 9%, transparent 9.5%),
+    linear-gradient(0deg, #503522 0 20%, #6fa545 20% 23%, transparent 23%),
+    #31536a;
+  color: #f7dda4;
   text-align: center;
 }
 
@@ -159,7 +160,7 @@ canvas {
 
 .rotate-prompt strong {
   max-width: 280px;
-  color: #fff9e9;
+  color: #fff2c7;
   font-size: clamp(20px, 6vw, 28px);
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -168,7 +169,7 @@ canvas {
 
 .rotate-prompt span {
   max-width: 280px;
-  color: rgba(246, 231, 193, 0.62);
+  color: rgba(255, 242, 199, 0.72);
   font-size: 14px;
   line-height: 1.5;
   text-wrap: pretty;
@@ -179,7 +180,7 @@ canvas {
   width: 104px;
   height: 104px;
   margin-bottom: 4px;
-  filter: drop-shadow(5px 5px 0 rgba(9, 10, 19, 0.62));
+  filter: drop-shadow(5px 5px 0 rgba(45, 29, 25, 0.62));
 }
 
 .rotate-phone {
@@ -190,13 +191,13 @@ canvas {
   width: 34px;
   height: 62px;
   background:
-    linear-gradient(#4e9b91, #4e9b91) center 8px / 20px 3px no-repeat,
-    linear-gradient(#4e9b91, #4e9b91) center calc(100% - 8px) / 8px 3px no-repeat,
-    #242743;
+    linear-gradient(#a9d35f, #a9d35f) center 8px / 20px 3px no-repeat,
+    linear-gradient(#a9d35f, #a9d35f) center calc(100% - 8px) / 8px 3px no-repeat,
+    #503522;
   box-shadow:
-    inset 0 0 0 3px #f6e7c1,
-    inset 0 0 0 6px #17182b,
-    4px 4px 0 #090a13;
+    inset 0 0 0 3px #f7dda4,
+    inset 0 0 0 6px #30261f,
+    4px 4px 0 #261a17;
   transform: rotate(-8deg);
   transform-origin: center;
   animation: turn-phone 1.8s cubic-bezier(0.2, 0, 0, 1) infinite;
@@ -207,7 +208,7 @@ canvas {
   right: 5px;
   bottom: 6px;
   display: block;
-  color: #f2b544 !important;
+  color: #f6d77a !important;
   font-size: 34px !important;
   font-weight: 700;
   line-height: 1 !important;

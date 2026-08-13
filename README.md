@@ -1,6 +1,6 @@
 # birdddddd
 
-A one-button endless arcade game combining Flappy Bird's rapid obstacle loop with VVVVVV's gravity reversal. Guide a bedraggled fledgling through a strange mechanical aviary, reverse gravity without losing momentum, and collect feather chains for bonus points.
+A one-button endless arcade game combining Flappy Bird's rapid obstacle loop with VVVVVV's gravity reversal. Guide a bedraggled fledgling through four original pixel-fantasy biomes, reverse gravity without losing momentum, and collect feather chains for bonus points.
 
 ## Play
 
@@ -63,6 +63,7 @@ No cross-origin API or CORS permission is required for the iframe. Best score, m
 - 320×180 logical canvas with nearest-neighbour responsive scaling
 - Deterministic 60 Hz custom physics with momentum-preserving gravity flips
 - Twenty-four authored chunks across four escalating chapters
+- Four complete biome art systems: Verdant Wilds, Sunken Dunes, Violet Chasm, and Ashen Depths
 - Rising and falling tunnel profiles with persistent slope/pillar pushback and left-edge failure
 - Compatibility metadata and discrete physics traversal checks for chunk transitions
 - Gate scoring, optional three-feather bonus chains, local best-score/settings persistence

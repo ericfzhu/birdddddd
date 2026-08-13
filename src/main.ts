@@ -34,7 +34,7 @@ function startGame(): Promise<void> {
         parent: "game",
         width: VIEW_WIDTH,
         height: VIEW_HEIGHT,
-        backgroundColor: "#17182b",
+        backgroundColor: "#211a1d",
         pixelArt: true,
         roundPixels: true,
         render: {
