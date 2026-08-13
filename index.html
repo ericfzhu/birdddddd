@@ -8,16 +8,19 @@
     <title>Impossible Aviary</title>
   </head>
   <body>
-    <main class="page-shell">
+    <main class="page-shell" id="game-content">
       <section class="game-shell" aria-label="Impossible Aviary game">
         <div id="game" aria-label="Game canvas"></div>
       </section>
       <p class="controls-hint"><kbd>Space</kbd> / tap to reverse gravity <span>·</span> <kbd>P</kbd> pause <span>·</span> <kbd>M</kbd> sound <span>·</span> <kbd>F</kbd> fullscreen</p>
     </main>
-    <aside class="rotate-prompt" role="status" aria-live="polite">
-      <div class="rotate-bird" aria-hidden="true">↻</div>
-      <strong>Turn the aviary sideways</strong>
-      <span>This little bird needs a landscape.</span>
+    <aside class="rotate-prompt" id="rotate-prompt" role="status" aria-live="polite" aria-hidden="true">
+      <div class="rotate-machine" aria-hidden="true">
+        <span class="rotate-phone"></span>
+        <span class="rotate-arrow">↻</span>
+      </div>
+      <strong>Rotate to landscape</strong>
+      <span>Turn your phone sideways to open the aviary.</span>
     </aside>
     <script type="module" src="/src/main.ts"></script>
   </body>

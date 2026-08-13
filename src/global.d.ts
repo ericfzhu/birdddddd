@@ -5,5 +5,6 @@ declare global {
     render_game_to_text?: () => string;
     advanceTime?: (milliseconds: number) => void;
     __impossibleAviary?: Phaser.Game;
+    __aviaryOrientationState?: () => string;
   }
 }
