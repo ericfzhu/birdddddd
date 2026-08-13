@@ -9,7 +9,6 @@ import {
   PLAY_TOP,
   PLAYER_HEIGHT,
   PLAYER_MIN_X,
-  PLAYER_RECOVERY_SPEED,
   PLAYER_WIDTH,
   PLAYER_X,
   RESTART_DELAY_SECONDS,
@@ -127,7 +126,6 @@ export class GameModel {
     const previousY = this.playerY;
     const previousDistance = this.distance;
     const speed = CHAPTERS[this.chapter]?.speed ?? CHAPTERS[0].speed;
-    this.playerX = Math.min(PLAYER_X, this.playerX + PLAYER_RECOVERY_SPEED * dt);
     this.distance += speed * dt;
     this.velocityY = clamp(
       this.velocityY + this.gravity * GRAVITY_ACCELERATION * dt,
@@ -139,6 +137,7 @@ export class GameModel {
     this.resolveTunnel(previousX, previousY, previousDistance);
     if (this.mode !== "playing") return;
     this.resolveSolids(previousY);
+    if (this.mode !== "playing") return;
     this.processHazards();
     if (this.mode !== "playing") return;
     this.processFeathers();
@@ -263,7 +262,9 @@ export class GameModel {
   }
 
   textSnapshot(): string {
-    const visibleHazards = this.visibleRects().filter((rect) => rect.kind !== "solid").slice(0, 8);
+    const visibleRects = this.visibleRects();
+    const visibleHazards = visibleRects.filter((rect) => rect.kind !== "solid").slice(0, 8);
+    const visibleSolids = visibleRects.filter((rect) => rect.kind === "solid").slice(0, 8);
     return JSON.stringify({
       coordinateSystem: "origin top-left; x increases right; y increases down; logical viewport 320x180",
       mode: this.mode,
@@ -285,6 +286,7 @@ export class GameModel {
       transition: this.chapterTransition(),
       restartReady: this.mode === "dead" && this.deathTimer >= RESTART_DELAY_SECONDS,
       hazards: visibleHazards.map(({ x, y, w, h, kind }) => ({ x: Math.round(x), y: Math.round(y), w, h, kind })),
+      solids: visibleSolids.map(({ x, y, w, h, detail }) => ({ x: Math.round(x), y: Math.round(y), w, h, detail })),
       feathers: this.visibleFeathers().filter((item) => !item.collected).slice(0, 6).map((item) => ({ x: Math.round(item.x), y: item.y })),
     });
   }
@@ -382,6 +384,16 @@ export class GameModel {
             this.velocityY = 0;
             if (landed) this.events.push({ type: "land" });
           }
+        }
+
+        const overlapsHorizontally = this.playerX + halfWidth > left && this.playerX - halfWidth < left + solid.w;
+        const overlapsVertically = this.playerY + halfHeight > solidY && this.playerY - halfHeight < solidY + solid.h;
+        if (!overlapsHorizontally || !overlapsVertically) continue;
+        this.playerX = Math.min(this.playerX, left - halfWidth);
+        if (this.playerX <= PLAYER_MIN_X + 0.5) {
+          this.playerX = Math.max(PLAYER_MIN_X, this.playerX);
+          this.die();
+          return;
         }
       }
     }

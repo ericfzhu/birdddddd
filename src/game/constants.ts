@@ -4,7 +4,6 @@ export const PLAY_TOP = 16;
 export const PLAY_BOTTOM = 164;
 export const PLAYER_X = 90;
 export const PLAYER_MIN_X = 10;
-export const PLAYER_RECOVERY_SPEED = 52;
 export const PLAYER_WIDTH = 14;
 export const PLAYER_HEIGHT = 12;
 export const HITBOX_INSET = 2;

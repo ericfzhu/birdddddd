@@ -1,6 +1,6 @@
 export type GameMode = "ready" | "playing" | "paused" | "dead";
 export type SurfacePreference = "any" | "top" | "bottom";
-export type HazardKind = "thorns" | "barbs" | "wire" | "shutter" | "beak" | "spinner";
+export type HazardKind = "thorns" | "barbs" | "shutter" | "beak" | "spinner";
 export type HazardAttachment = "ceiling" | "floor" | "floating";
 
 export interface Envelope {

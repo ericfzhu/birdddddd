@@ -59,8 +59,8 @@ function collidesHazard(state: SolverState, progress: number, hazard: HazardSpec
   return state.y + halfH > y && state.y - halfH < y + hazard.h;
 }
 
-function resolveSolid(state: SolverState, previousY: number, progress: number, solid: SolidSpec, tunnelOffset: number): void {
-  if (progress + halfW <= solid.x || progress - halfW >= solid.x + solid.w) return;
+function resolveSolid(state: SolverState, previousY: number, progress: number, solid: SolidSpec, tunnelOffset: number): boolean {
+  if (progress + halfW <= solid.x || progress - halfW >= solid.x + solid.w) return false;
   const solidY = solid.y + tunnelOffset;
   if (state.gravity === 1) {
     if (previousY + halfH <= solidY && state.y + halfH >= solidY && state.vy >= 0) {
@@ -74,6 +74,7 @@ function resolveSolid(state: SolverState, previousY: number, progress: number, s
       state.vy = 0;
     }
   }
+  return state.y + halfH > solidY && state.y - halfH < solidY + solid.h;
 }
 
 function integrate(source: SolverState, flipped: boolean, tunnelOffset: number): SolverState {
@@ -123,9 +124,14 @@ export function canTraverseChunk(
       for (const flipped of choices) {
         const previousY = source.y;
         const state = integrate(source, flipped, tunnelOffset);
-        for (const solid of definition.solids) {
-          resolveSolid(state, previousY, progress, solid, tunnelOffsetAt(definition, solid.x + solid.w / 2));
-        }
+        const blockedBySolid = definition.solids.some((solid) => resolveSolid(
+          state,
+          previousY,
+          progress,
+          solid,
+          tunnelOffsetAt(definition, solid.x + solid.w / 2),
+        ));
+        if (blockedBySolid) continue;
         if (definition.hazards.some((hazard) => collidesHazard(
           state,
           progress,

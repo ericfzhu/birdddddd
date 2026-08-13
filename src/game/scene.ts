@@ -663,8 +663,23 @@ export class AviaryScene extends Phaser.Scene {
     }
   }
 
+  private drawCagePillar(g: Phaser.GameObjects.Graphics, rect: VisibleRect): void {
+    const primary = rect.chapter === 1 ? COLORS.teal : COLORS.cream;
+    const secondary = rect.chapter === 2 ? COLORS.yolk : COLORS.teal;
+    g.fillStyle(COLORS.shadow, 0.9);
+    g.fillRect(rect.x + 2, rect.y + 2, rect.w, rect.h);
+    g.fillStyle(primary, 1);
+    g.fillRect(rect.x + 1, rect.y, Math.max(2, rect.w - 2), rect.h);
+    g.fillStyle(secondary, 0.95);
+    for (let y = rect.y + 4; y < rect.y + rect.h - 1; y += 9) g.fillRect(rect.x, y, rect.w, 2);
+  }
+
   private drawRectEntity(g: Phaser.GameObjects.Graphics, rect: VisibleRect): void {
     if (rect.kind === "solid") {
+      if (rect.detail === "cage") {
+        this.drawCagePillar(g, rect);
+        return;
+      }
       this.drawChapterSolid(g, rect);
       return;
     }
@@ -699,13 +714,6 @@ export class AviaryScene extends Phaser.Scene {
       }
       g.fillStyle(COLORS.cream, 0.75);
       for (let x = rect.x + 4; x < rect.x + rect.w - 2; x += 9) g.fillRect(x, baseY + 1, 2, 2);
-      return;
-    }
-    if (rect.kind === "wire") {
-      g.fillStyle(COLORS.coral, 1);
-      g.fillRect(rect.x + 2, rect.y, Math.max(2, rect.w - 4), rect.h);
-      g.fillStyle(COLORS.cream, 1);
-      for (let y = rect.y + 4; y < rect.y + rect.h; y += 10) g.fillRect(rect.x, y, rect.w, 3);
       return;
     }
     if (rect.kind === "shutter") {

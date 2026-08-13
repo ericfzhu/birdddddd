@@ -100,6 +100,7 @@ describe("birdddddd model", () => {
     expect(hazards.some((hazard) => hazard.kind === "barbs" && hazard.attachment === "floor")).toBe(true);
     expect(hazards.some((hazard) => hazard.kind === "spinner" && !hazard.motion)).toBe(true);
     expect(hazards.some((hazard) => hazard.kind === "spinner" && hazard.motion)).toBe(true);
+    expect(CHUNKS.flatMap((chunk) => chunk.solids).filter((solid) => solid.detail === "cage").length).toBeGreaterThanOrEqual(8);
   });
 
   it("authors rising and falling tunnel sections that return to compatible flat entrances", () => {
@@ -113,7 +114,7 @@ describe("birdddddd model", () => {
     }
   });
 
-  it("pushes a bird left against an uncleared slope, lets it recover when clear, and kills it at the screen edge", () => {
+  it("makes slope pushback permanent and kills the bird when repeated displacement reaches the screen edge", () => {
     const risingTunnel: ChunkDefinition = {
       ...safeChunk(),
       id: "test-rising-tunnel",
@@ -152,7 +153,7 @@ describe("birdddddd model", () => {
     model.playerY = 90;
     model.velocityY = 0;
     model.advance(180);
-    expect(model.playerX).toBeGreaterThan(shovedX);
+    expect(model.playerX).toBeCloseTo(shovedX, 5);
 
     const trapped = new GameModel(83);
     trapped.chunks = [activate(risingTunnel, 20)];
@@ -160,6 +161,29 @@ describe("birdddddd model", () => {
     trapped.advance(1400);
     expect(trapped.mode, trapped.textSnapshot()).toBe("dead");
     expect(trapped.playerX).toBeLessThanOrEqual(PLAYER_MIN_X + 0.5);
+  });
+
+  it("pushes the bird permanently when a safe cage pillar catches it from the side", () => {
+    const pillarChunk: ChunkDefinition = {
+      ...safeChunk(),
+      id: "test-safe-pillar",
+      solids: [{ x: 72, y: PLAY_TOP, w: 6, h: 55, detail: "cage" }],
+    };
+    const model = new GameModel(85);
+    model.chunks = [activate(pillarChunk, 20)];
+    model.mode = "playing";
+    model.playerY = 40;
+
+    model.step();
+    expect(model.mode).toBe("playing");
+    expect(model.playerX).toBeLessThan(PLAYER_X);
+
+    const shovedX = model.playerX;
+    model.playerY = 90;
+    model.velocityY = 0;
+    model.advance(300);
+    expect(model.mode).toBe("playing");
+    expect(model.playerX).toBeCloseTo(shovedX, 5);
   });
 
   it("treats a floating spinner as lethal terrain", () => {
