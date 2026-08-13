@@ -260,6 +260,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@fontsource-variable/pixelify-sans@npm:5.3.0":
+  version: 5.3.0
+  resolution: "@fontsource-variable/pixelify-sans@npm:5.3.0"
+  checksum: d63f0e899652d0016b2225b440a6b2a8c52b6c50987a2d9dcba03b3f2adb7571b121b477262be2c153c21ef2e36b77a88bb7ad3b652cd2e520e0d3169e2a8e9f
+  languageName: node
+  linkType: hard
+
 "@img/colour@npm:^1.1.0":
   version: 1.1.0
   resolution: "@img/colour@npm:1.1.0"
@@ -822,6 +829,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "birdddddd@workspace:."
   dependencies:
+    "@fontsource-variable/pixelify-sans": 5.3.0
     phaser: ^4.2.0
     playwright: ^1.62.1
     typescript: ^5.9.0

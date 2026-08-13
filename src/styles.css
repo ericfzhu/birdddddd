@@ -1,3 +1,11 @@
+@font-face {
+  font-family: "Pixelify Sans";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 400 700;
+  src: url("@fontsource-variable/pixelify-sans/files/pixelify-sans-latin-wght-normal.woff2") format("woff2-variations");
+}
+
 :root {
   color-scheme: dark;
   font-family: ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, monospace;
@@ -186,13 +194,17 @@ canvas {
 
 .hud-title {
   color: #fff9e9;
+  font-family: "Pixelify Sans", ui-monospace, monospace;
   font-size: 5.625cqw;
   font-weight: 700;
-  letter-spacing: 0.015em;
+  letter-spacing: 0.035em;
 }
 
 .hud-prompt {
+  font-family: "Pixelify Sans", ui-monospace, monospace;
   font-size: 2.8125cqw;
+  font-weight: 600;
+  letter-spacing: 0.06em;
 }
 
 .hud-score {

@@ -15,6 +15,7 @@
     "deploy": "yarn build && wrangler deploy"
   },
   "dependencies": {
+    "@fontsource-variable/pixelify-sans": "5.3.0",
     "phaser": "^4.2.0"
   },
   "devDependencies": {
