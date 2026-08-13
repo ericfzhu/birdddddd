@@ -30,17 +30,19 @@ yarn build
 
 Open `http://localhost:5173`. Add `?seed=123` to reproduce a particular chunk sequence during testing.
 
-## Cloudflare deployment and embedding
+## Cloudflare Workers deployment and embedding
 
-The production build is configured for a Cloudflare Pages project named `birdddddd`. Deploy it with:
+The production build is configured as an assets-only Cloudflare Worker named `birdddddd`. No Worker script or Cloudflare Vite plugin is required; Wrangler uploads the contents of `dist` as static assets. Deploy it with:
 
 ```sh
 yarn deploy
 ```
 
-The deploy script uploads `dist` directly to Pages. `public/_headers` allows the game to be framed by `ericfzhu.com`, its `www` hostname, its Cloudflare Pages preview hostnames, and local development servers. Other websites cannot frame the deployed game.
+The deploy script builds the game and uploads `dist` through Workers Static Assets. `public/_headers` allows the game to be framed by `ericfzhu.com`, its `www` hostname, its Cloudflare Pages preview hostnames, and local development servers. Other websites cannot frame the deployed game.
 
-After assigning the Pages project a public hostname, embed that single deployment in the main website:
+For a Git-connected Cloudflare build, use `yarn build` as the build command and `yarn wrangler deploy` as the deploy command. The checked-in `wrangler.jsonc` supplies the Worker name and asset directory, preventing Wrangler from trying to convert the Vite project automatically.
+
+After assigning the Worker a custom domain, embed that single deployment in the main website:
 
 ```tsx
 <iframe

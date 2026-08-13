@@ -11,8 +11,8 @@
     "dev": "vite --host 0.0.0.0",
     "build": "tsc --noEmit && vite build",
     "test": "vitest run",
-    "preview:cloudflare": "yarn build && wrangler pages dev dist --compatibility-date=2026-08-13",
-    "deploy": "yarn build && wrangler pages deploy dist --project-name birdddddd"
+    "preview:cloudflare": "yarn build && wrangler dev",
+    "deploy": "yarn build && wrangler deploy"
   },
   "dependencies": {
     "phaser": "^4.2.0"
