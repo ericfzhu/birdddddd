@@ -383,13 +383,137 @@ export class AviaryScene extends Phaser.Scene {
     this.drawBoundaryRails(g, from, 1 - progress);
     if (to !== from) this.drawBoundaryRails(g, to, progress);
 
+    this.drawChunkDecorations(g);
     this.drawTransitionPassages(g);
     this.drawChunkGates(g);
     for (const rect of this.model.visibleRects()) this.drawRectEntity(g, rect);
     for (const feather of this.model.visibleFeathers()) {
       if (!feather.collected) this.drawFeather(g, feather.x, feather.y, 1);
     }
-    if (this.model.mode !== "dead" || this.model.deathTimer < 0.08) this.drawBird(g);
+    if (this.model.animationState() !== "gone") this.drawBird(g);
+  }
+
+  private drawChunkDecorations(g: Phaser.GameObjects.Graphics): void {
+    for (const chunk of this.model.chunks) {
+      if (chunk.definition.transition) continue;
+      const origin = chunk.startX - this.model.distance;
+      const idValue = [...chunk.definition.id].reduce((total, character) => total + character.charCodeAt(0), 0);
+      const x = origin + 72 + (idValue % 38);
+      const y = 48 + (idValue % 3) * 34;
+      if (x < -36 || x > VIEW_WIDTH + 36) continue;
+      switch (chunk.definition.decoration) {
+        case "nest":
+          this.drawNestAndFeeder(g, x, y);
+          break;
+        case "gears":
+          this.drawGearAndSpring(g, x, y);
+          break;
+        case "bells":
+          this.drawHangingBell(g, x, y);
+          break;
+        case "eggs":
+          this.drawClockworkEgg(g, x, y);
+          break;
+        case "passage":
+          break;
+      }
+      this.drawBackgroundBird(g, x + 31, y + (idValue % 2 === 0 ? 20 : -18), chunk.definition.chapter);
+    }
+  }
+
+  private drawNestAndFeeder(g: Phaser.GameObjects.Graphics, x: number, y: number): void {
+    g.lineStyle(1, COLORS.teal, 0.4);
+    g.lineBetween(x, PLAY_TOP, x, y - 8);
+    g.fillStyle(COLORS.teal, 0.42);
+    g.fillRect(x - 6, y - 8, 12, 11);
+    g.fillStyle(COLORS.shadow, 0.7);
+    g.fillRect(x - 4, y - 5, 8, 2);
+    g.fillRect(x - 2, y + 3, 4, 4);
+    g.lineStyle(2, COLORS.teal, 0.4);
+    g.strokeCircle(x + 17, y + 13, 10);
+    g.lineBetween(x + 8, y + 13, x + 26, y + 13);
+    g.lineBetween(x + 10, y + 17, x + 24, y + 17);
+  }
+
+  private drawGearAndSpring(g: Phaser.GameObjects.Graphics, x: number, y: number): void {
+    g.lineStyle(2, COLORS.teal, 0.42);
+    g.strokeCircle(x, y, 11);
+    g.strokeCircle(x, y, 3);
+    g.fillStyle(COLORS.teal, 0.38);
+    for (let tooth = 0; tooth < 8; tooth += 1) {
+      const angle = tooth * Math.PI / 4;
+      g.fillRect(Math.round(x + Math.cos(angle) * 12) - 2, Math.round(y + Math.sin(angle) * 12) - 2, 4, 4);
+    }
+    const springX = x + 21;
+    g.lineStyle(1, COLORS.teal, 0.42);
+    g.lineBetween(springX, PLAY_TOP, springX, y - 12);
+    for (let offset = -12; offset < 13; offset += 4) {
+      const side = ((offset + 12) / 4) % 2 === 0 ? -4 : 4;
+      g.lineBetween(springX - side, y + offset, springX + side, y + offset + 4);
+    }
+  }
+
+  private drawHangingBell(g: Phaser.GameObjects.Graphics, x: number, y: number): void {
+    const swing = this.settings.reducedMotion ? 0 : Math.round(Math.sin(this.uiTime * 2.4 + x * 0.02) * 2);
+    const bellX = x + swing;
+    g.lineStyle(1, COLORS.teal, 0.42);
+    g.lineBetween(x, PLAY_TOP, bellX, y - 11);
+    g.fillStyle(COLORS.teal, 0.46);
+    g.fillTriangle(bellX - 9, y + 5, bellX, y - 11, bellX + 9, y + 5);
+    g.fillRect(bellX - 10, y + 4, 20, 3);
+    g.fillStyle(COLORS.shadow, 0.74);
+    g.fillRect(bellX - 1, y + 7, 3, 4);
+    g.lineStyle(1, COLORS.teal, 0.32);
+    g.lineBetween(bellX - 15, y + 15, bellX + 15, y + 15);
+  }
+
+  private drawClockworkEgg(g: Phaser.GameObjects.Graphics, x: number, y: number): void {
+    g.fillStyle(COLORS.shadow, 0.62);
+    g.fillEllipse(x + 2, y + 3, 20, 27);
+    g.fillStyle(COLORS.teal, 0.34);
+    g.fillEllipse(x, y, 20, 27);
+    g.lineStyle(2, COLORS.teal, 0.48);
+    g.strokeEllipse(x, y, 15, 21);
+    g.lineBetween(x - 7, y, x + 7, y);
+    g.strokeCircle(x, y + 4, 3);
+    const keyLift = this.settings.reducedMotion ? 0 : Math.round(Math.sin(this.uiTime * 3 + x) * 1);
+    g.lineBetween(x + 10, y - 7, x + 16, y - 10 + keyLift);
+    g.lineBetween(x + 16, y - 14 + keyLift, x + 16, y - 6 + keyLift);
+  }
+
+  private drawBackgroundBird(g: Phaser.GameObjects.Graphics, x: number, y: number, chapter: number): void {
+    const alpha = 0.28 + chapter * 0.025;
+    g.fillStyle(COLORS.shadow, alpha + 0.2);
+    if (chapter === 0) {
+      g.fillCircle(x, y, 6);
+      g.fillRect(x - 5, y + 3, 10, 7);
+      g.fillStyle(COLORS.teal, alpha);
+      g.fillRect(x + 2, y - 1, 2, 2);
+      return;
+    }
+    if (chapter === 1) {
+      g.fillRect(x - 7, y - 6, 14, 15);
+      g.fillRect(x - 3, y - 10, 8, 5);
+      g.lineStyle(1, COLORS.teal, alpha);
+      g.lineBetween(x + 7, y - 3, x + 12, y - 6);
+      g.lineBetween(x + 12, y - 9, x + 12, y - 3);
+      return;
+    }
+    if (chapter === 2) {
+      g.fillEllipse(x, y + 4, 14, 18);
+      g.fillRect(x + 2, y - 10, 4, 14);
+      g.fillCircle(x + 4, y - 12, 5);
+      g.fillStyle(COLORS.teal, alpha);
+      g.fillRect(x + 5, y - 13, 2, 2);
+      return;
+    }
+    g.fillEllipse(x, y + 3, 18, 14);
+    g.fillCircle(x - 5, y - 6, 5);
+    g.fillCircle(x + 5, y - 7, 5);
+    g.fillStyle(COLORS.teal, alpha + 0.05);
+    g.fillRect(x - 6, y - 7, 2, 2);
+    g.fillRect(x + 5, y - 8, 2, 2);
+    g.fillRect(x, y + 2, 2, 2);
   }
 
   private drawBoundaryRails(g: Phaser.GameObjects.Graphics, chapter: number, alpha: number): void {
@@ -601,38 +725,63 @@ export class AviaryScene extends Phaser.Scene {
 
   private drawBird(g: Phaser.GameObjects.Graphics): void {
     const gravity = this.model.gravity;
-    const y = this.model.playerY;
-    const squash = this.landingSquash > 0 ? 2 : 0;
-    const flutter = this.model.mode === "playing" && this.model.velocityY !== 0 ? Math.sin(this.uiTime * 18) : 0;
+    const animation = this.model.animationState();
+    const motionTime = this.settings.reducedMotion ? 0 : this.uiTime;
+    const runFrame = Math.floor(motionTime * 12) % 2;
+    const running = animation === "run";
+    const stunned = animation === "stunned";
+    const flutter = animation === "flutter" ? Math.sin(motionTime * 20) : 0;
+    const runBob = running && runFrame === 1 ? -gravity : 0;
+    const stunJitter = stunned && !this.settings.reducedMotion ? Math.round(Math.sin(this.model.deathTimer * 85)) : 0;
+    const x = PLAYER_X + stunJitter;
+    const y = this.model.playerY + runBob;
+    const squash = stunned ? 3 : this.landingSquash > 0 ? 2 : 0;
     const bodyHeight = PLAYER_HEIGHT - squash;
     const bodyY = y - bodyHeight / 2 + (gravity > 0 ? squash / 2 : -squash / 2);
 
     g.fillStyle(COLORS.shadow, 0.75);
-    g.fillRect(PLAYER_X - PLAYER_WIDTH / 2 + 2, bodyY + 2, PLAYER_WIDTH, bodyHeight);
-    g.fillStyle(COLORS.yolk, 1);
-    g.fillRect(PLAYER_X - PLAYER_WIDTH / 2, bodyY, PLAYER_WIDTH - 2, bodyHeight);
-    g.fillRect(PLAYER_X + 4, bodyY + 2, 4, bodyHeight - 4);
+    g.fillRect(x - PLAYER_WIDTH / 2 + 2, bodyY + 2, PLAYER_WIDTH, bodyHeight);
+    const deathFlash = stunned && Math.floor(this.model.deathTimer * 24) % 2 === 1;
+    g.fillStyle(deathFlash ? COLORS.cream : COLORS.yolk, 1);
+    g.fillRect(x - PLAYER_WIDTH / 2, bodyY, PLAYER_WIDTH - 2, bodyHeight);
+    g.fillRect(x + 4, bodyY + 2, 4, Math.max(2, bodyHeight - 4));
 
     g.fillStyle(COLORS.cream, 1);
     const eyeY = y - gravity * 2;
-    g.fillRect(PLAYER_X + 3, eyeY - 2, 4, 4);
+    g.fillRect(x + 3, eyeY - 2, 4, 4);
     g.fillStyle(COLORS.ink, 1);
-    g.fillRect(PLAYER_X + 5, eyeY - 1, 2, 2);
+    if (stunned) {
+      g.fillRect(x + 3, eyeY - 2, 1, 1);
+      g.fillRect(x + 6, eyeY - 2, 1, 1);
+      g.fillRect(x + 4, eyeY - 1, 2, 2);
+      g.fillRect(x + 3, eyeY + 1, 1, 1);
+      g.fillRect(x + 6, eyeY + 1, 1, 1);
+    } else {
+      g.fillRect(x + 5, eyeY - 1, 2, 2);
+    }
 
     g.fillStyle(COLORS.teal, 1);
-    const wingY = y + gravity * (1 + flutter * 1.5);
-    g.fillTriangle(PLAYER_X - 4, wingY - 3, PLAYER_X + 1, wingY, PLAYER_X - 4, wingY + 4);
+    const wingY = y + gravity * (stunned ? 3 : 1 + flutter * 2);
+    const wingReach = stunned ? 7 : animation === "flutter" ? (flutter > 0 ? 7 : 4) : 4;
+    g.fillTriangle(x - 4, wingY - 3, x + 1, wingY, x - wingReach, wingY + gravity * 5);
+    if (stunned) g.fillTriangle(x + 3, wingY - 2, x + 7, wingY, x + 5, wingY + gravity * 6);
 
     g.fillStyle(COLORS.coral, 1);
-    g.fillTriangle(PLAYER_X + 8, y - 2, PLAYER_X + 12, y, PLAYER_X + 8, y + 2);
+    g.fillTriangle(x + 8, y - 2, x + 12, y + (stunned ? 2 : 0), x + 8, y + 2);
     g.fillStyle(COLORS.cream, 1);
     const feetY = y + gravity * (bodyHeight / 2 + 2);
-    g.fillRect(PLAYER_X - 3, feetY - (gravity < 0 ? 1 : 0), 3, 1);
-    g.fillRect(PLAYER_X + 2, feetY - (gravity < 0 ? 1 : 0), 3, 1);
+    const footOffset = running ? (runFrame === 0 ? -2 : 2) : 0;
+    g.fillRect(x - 3 + footOffset, feetY - (gravity < 0 ? 1 : 0), 3, 1);
+    g.fillRect(x + 2 - footOffset, feetY - (gravity < 0 ? 1 : 0), 3, 1);
+    if (running) {
+      g.fillRect(x - 2 + footOffset, feetY + gravity, 2, 1);
+      g.fillRect(x + 3 - footOffset, feetY + gravity, 2, 1);
+    }
 
     g.fillStyle(COLORS.yolk, 1);
-    g.fillRect(PLAYER_X - 9, y - gravity * 4, 3, 2);
-    g.fillRect(PLAYER_X - 10, y + gravity * 1, 4, 2);
+    const tailKick = running && runFrame === 1 ? 1 : 0;
+    g.fillRect(x - 9 - tailKick, y - gravity * 4, 3, 2);
+    g.fillRect(x - 10, y + gravity * (1 + tailKick), 4, 2);
   }
 
   private renderEffects(): void {
@@ -655,11 +804,12 @@ export class AviaryScene extends Phaser.Scene {
     const g = this.ui;
     g.clear();
     const mode = this.model.mode;
+    const revealDeathPanel = mode === "dead" && this.model.deathTimer >= 0.24;
     this.scoreText.setText(String(this.model.score)).setVisible(mode === "playing" || mode === "paused");
     this.titleText.setVisible(mode === "ready");
     this.promptText.setVisible(mode === "ready");
-    this.resultText.setVisible(mode === "dead");
-    this.helperText.setVisible(mode === "dead" || mode === "paused");
+    this.resultText.setVisible(revealDeathPanel);
+    this.helperText.setVisible(revealDeathPanel || mode === "paused");
 
     if (mode === "ready") {
       this.titleText.setY(57 + Math.sin(this.uiTime * 2.5) * 1.5);
@@ -697,7 +847,7 @@ export class AviaryScene extends Phaser.Scene {
       this.helperText.setText("PAUSED  ·  P OR TAP ⏸ TO RETURN").setY(112);
     }
 
-    if (mode === "dead") {
+    if (revealDeathPanel) {
       g.fillStyle(COLORS.ink, 0.82);
       g.fillRoundedRect(82, 45, 156, 96, 10);
       g.lineStyle(1, COLORS.cream, 0.16);

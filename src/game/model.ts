@@ -196,6 +196,30 @@ export class GameModel {
     return feathers;
   }
 
+  isGrounded(): boolean {
+    if (Math.abs(this.velocityY) > 0.01) return false;
+    const solidHalfWidth = PLAYER_WIDTH / 2 - HITBOX_INSET;
+    const solidHalfHeight = PLAYER_HEIGHT / 2 - HITBOX_INSET;
+    if (this.gravity === 1 && Math.abs(this.playerY - (PLAY_BOTTOM - PLAYER_HEIGHT / 2)) < 0.1) return true;
+    if (this.gravity === -1 && Math.abs(this.playerY - (PLAY_TOP + PLAYER_HEIGHT / 2)) < 0.1) return true;
+    for (const active of this.chunks) {
+      const origin = active.startX - this.distance;
+      for (const solid of active.definition.solids) {
+        const left = origin + solid.x;
+        if (PLAYER_X + solidHalfWidth <= left || PLAYER_X - solidHalfWidth >= left + solid.w) continue;
+        const surfaceY = this.gravity === 1 ? solid.y - solidHalfHeight : solid.y + solid.h + solidHalfHeight;
+        if (Math.abs(this.playerY - surfaceY) < 0.1) return true;
+      }
+    }
+    return false;
+  }
+
+  animationState(): "idle" | "run" | "flutter" | "stunned" | "gone" {
+    if (this.mode === "dead") return this.deathTimer < 0.24 ? "stunned" : "gone";
+    if (this.mode !== "playing") return "idle";
+    return this.isGrounded() ? "run" : "flutter";
+  }
+
   chapterTransition(): ChapterTransitionState | undefined {
     const active = this.chunks.find((chunk) => chunk.definition.transition);
     const transition = active?.definition.transition;
@@ -216,6 +240,7 @@ export class GameModel {
       coordinateSystem: "origin top-left; x increases right; y increases down; logical viewport 320x180",
       mode: this.mode,
       player: { x: PLAYER_X, y: Number(this.playerY.toFixed(2)), vy: Number(this.velocityY.toFixed(2)), gravity: this.gravity },
+      animation: this.animationState(),
       score: this.score,
       gates: this.gates,
       bestScore: this.bestScore,

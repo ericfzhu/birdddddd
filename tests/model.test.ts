@@ -62,7 +62,17 @@ describe("Impossible Aviary model", () => {
     model.advance(1500);
     expect(model.playerY).toBeCloseTo(PLAY_TOP + PLAYER_HEIGHT / 2, 5);
     expect(model.velocityY).toBe(0);
+    expect(model.isGrounded()).toBe(true);
+    expect(model.animationState()).toBe("run");
     expect(model.mode).toBe("playing");
+  });
+
+  it("exposes the stunned pose before the death burst clears the bird", () => {
+    const model = new GameModel(778);
+    model.mode = "dead";
+    expect(model.animationState()).toBe("stunned");
+    model.advance(260);
+    expect(model.animationState()).toBe("gone");
   });
 
   it("contains exactly six validated chunks per chapter", () => {
