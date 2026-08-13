@@ -22,6 +22,7 @@ Original prompt: Implement the complete “Impossible Aviary — Gameplay and Ar
 - Fixed missed-feather lifecycle: passing one still resets the three-feather chain immediately, but its sprite now continues scrolling until it naturally exits the left edge instead of popping out beside the bird.
 - Added explicit deterministic character animation states: grounded running with alternating feet and body bob, stronger two-pose airborne flutter, landing squash, and a readable stunned/death pose before the feather burst and results panel.
 - Added non-colliding authored prop families behind the gameplay layer: nursery feeders and nests, clockwork gears and springs, hanging bells, wind-up eggs, and passive background birds that become stranger in later chapters. Props stay in subdued cream/teal/shadow shades so yolk and coral retain their gameplay meaning.
+- Added a phone-specific portrait orientation gate. Coarse-pointer touch viewports at phone dimensions see only a mechanical “Rotate to landscape” screen; Phaser and the game scene are dynamically loaded only after landscape is available. Rotating an active game back to portrait sleeps the Phaser loop and returning to landscape wakes and resizes it without discarding the run.
 
 ## TODO
 
@@ -37,3 +38,4 @@ Original prompt: Implement the complete “Impossible Aviary — Gameplay and Ar
 - Chapter environment verification: `yarn test` passes 10/10, the production build succeeds, direct screenshots confirm all four environments are visually distinct, and a live-input Playwright run remains console-error free.
 - Feather lifecycle verification: `yarn test` passes 11/11; a deterministic browser capture shows a missed feather still rendered at x=73 after passing the bird at x=90, with the chain reset and no console errors.
 - Character/prop verification: `yarn test` passes 12/12; direct chapter captures show the new prop layer without obscuring hazards, and deterministic browser sequences verify `run`, `flutter`, `stunned`, `gone`, score-panel reveal, restart, and the next gravity input with no console errors.
+- Mobile orientation verification: `yarn test` passes 16/16. An emulated Pixel portrait starts with zero canvases and no game hook; landscape dynamically initializes one game canvas; touch starts play; rotating back sleeps the loop with physics/scrolling unchanged; landscape resumes the same run. Portrait and landscape screenshots are readable and console-error free.

@@ -10,7 +10,7 @@ A one-button endless arcade game about a bedraggled fledgling escaping a strange
 - **F:** enter/exit fullscreen
 - **Esc:** exit fullscreen
 
-The game is designed for landscape screens. On small portrait devices it asks the player to rotate before continuing.
+The game is designed for landscape screens. On phone-sized touch devices held in portrait, only the orientation screen loads. Phaser initializes after the phone is turned sideways; returning to portrait suspends the current run until landscape is restored.
 
 ## Development
 
