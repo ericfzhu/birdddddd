@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import { AudioDirector } from "./audio";
+import { cameraTargetY, trackCameraY } from "./camera";
 import {
   CHAPTERS,
   COLORS,
@@ -32,14 +33,16 @@ interface StoredSettings {
 
 const STORAGE_KEY = "birdddddd:v1";
 const LEGACY_STORAGE_KEY = "impossible-aviary:v1";
+const TEXT_RENDER_RESOLUTION = 4;
 const textStyle = (size: number, color = "#f6e7c1"): Phaser.Types.GameObjects.Text.TextStyle => ({
-  fontFamily: '"Courier New", ui-monospace, monospace',
+  fontFamily: 'ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, monospace',
   fontSize: `${size}px`,
-  fontStyle: "bold",
+  fontStyle: size >= 12 ? "700" : "600",
   color,
   align: "center",
   stroke: "#17182b",
-  strokeThickness: size >= 12 ? 2 : 1,
+  strokeThickness: size >= 12 ? 1 : 0,
+  resolution: TEXT_RENDER_RESOLUTION,
 });
 
 export class AviaryScene extends Phaser.Scene {
@@ -57,6 +60,7 @@ export class AviaryScene extends Phaser.Scene {
   private helperText!: Phaser.GameObjects.Text;
   private audio!: AudioDirector;
   private accumulator = 0;
+  private cameraOffsetY = 0;
   private manualMode = false;
   private uiTime = 0;
   private pulse = 0;
@@ -86,11 +90,11 @@ export class AviaryScene extends Phaser.Scene {
     this.ui = this.add.graphics();
 
     this.titleText = this.add.text(VIEW_WIDTH / 2, 64, "BIRDDDDDD", textStyle(18, "#fff9e9")).setOrigin(0.5);
-    this.promptText = this.add.text(VIEW_WIDTH / 2, 123, "TAP TO TURN GRAVITY", textStyle(8)).setOrigin(0.5);
+    this.promptText = this.add.text(VIEW_WIDTH / 2, 123, "TAP TO TURN GRAVITY", textStyle(9)).setOrigin(0.5);
     this.scoreText = this.add.text(VIEW_WIDTH / 2, 18, "0", textStyle(15, "#fff9e9")).setOrigin(0.5, 0);
-    this.chapterText = this.add.text(VIEW_WIDTH / 2, 49, "NURSERY WORKS", textStyle(7, "#f2b544")).setOrigin(0.5);
+    this.chapterText = this.add.text(VIEW_WIDTH / 2, 49, "NURSERY WORKS", textStyle(8, "#f2b544")).setOrigin(0.5);
     this.resultText = this.add.text(VIEW_WIDTH / 2, 73, "", textStyle(16, "#fff9e9")).setOrigin(0.5);
-    this.helperText = this.add.text(VIEW_WIDTH / 2, 124, "", textStyle(7)).setOrigin(0.5);
+    this.helperText = this.add.text(VIEW_WIDTH / 2, 124, "", textStyle(8)).setOrigin(0.5);
 
     this.audio = new AudioDirector(this, this.settings.muted);
     this.bindInput();
@@ -108,6 +112,7 @@ export class AviaryScene extends Phaser.Scene {
       this.model.step(FIXED_STEP_SECONDS);
       this.accumulator -= FIXED_STEP_SECONDS;
     }
+    this.updateCamera(delta);
     this.handleEvents(this.model.drainEvents());
     this.syncChapterTransition();
     this.audio.update(this.model.chapter, this.model.mode === "playing");
@@ -143,6 +148,13 @@ export class AviaryScene extends Phaser.Scene {
   private installTestHooks(): void {
     window.render_game_to_text = () => {
       const snapshot = JSON.parse(this.model.textSnapshot()) as Record<string, unknown>;
+      const player = snapshot.player as Record<string, unknown>;
+      player.screenY = Number((this.model.playerY + this.cameraOffsetY).toFixed(2));
+      const hazards = snapshot.hazards as Array<Record<string, unknown>>;
+      for (const hazard of hazards) hazard.screenY = Math.round(Number(hazard.y) + this.cameraOffsetY);
+      const feathers = snapshot.feathers as Array<Record<string, unknown>>;
+      for (const feather of feathers) feather.screenY = Math.round(Number(feather.y) + this.cameraOffsetY);
+      snapshot.camera = { offsetY: Number(this.cameraOffsetY.toFixed(2)), deadZone: [76, 104] };
       snapshot.settings = { muted: this.settings.muted, reducedMotion: this.settings.reducedMotion };
       return JSON.stringify(snapshot);
     };
@@ -153,6 +165,7 @@ export class AviaryScene extends Phaser.Scene {
         this.model.step(FIXED_STEP_SECONDS);
         this.uiTime += FIXED_STEP_SECONDS;
         this.updateEffects(FIXED_STEP_SECONDS);
+        this.updateCamera(FIXED_STEP_SECONDS);
       }
       this.handleEvents(this.model.drainEvents());
       this.syncChapterTransition();
@@ -253,6 +266,11 @@ export class AviaryScene extends Phaser.Scene {
     this.particles = this.particles.filter((particle) => particle.life > 0);
   }
 
+  private updateCamera(delta: number): void {
+    const target = cameraTargetY(this.cameraOffsetY, this.model.playerY, this.model.mode);
+    this.cameraOffsetY = trackCameraY(this.cameraOffsetY, target, delta, this.settings.reducedMotion);
+  }
+
   private spawnFeathers(x: number, y: number, count: number, color: number): void {
     for (let index = 0; index < count; index += 1) {
       const angle = (index / Math.max(1, count)) * Math.PI * 2 + this.uiTime;
@@ -292,9 +310,6 @@ export class AviaryScene extends Phaser.Scene {
     }
     this.drawChapterBackground(bg, from, 1 - progress);
     if (to !== from) this.drawChapterBackground(bg, to, progress);
-    bg.fillStyle(COLORS.ink, 0.72);
-    bg.fillRect(0, 0, VIEW_WIDTH, PLAY_TOP);
-    bg.fillRect(0, PLAY_BOTTOM, VIEW_WIDTH, VIEW_HEIGHT - PLAY_BOTTOM);
   }
 
   private drawChapterBackground(g: Phaser.GameObjects.Graphics, chapter: number, alpha: number): void {
@@ -375,7 +390,11 @@ export class AviaryScene extends Phaser.Scene {
     g.clear();
     const shakeX = this.shake > 0 ? Math.sin(this.uiTime * 120) * 1.4 : 0;
     const shakeY = this.shake > 0 ? Math.cos(this.uiTime * 90) * 1.1 : 0;
-    g.setPosition(shakeX, shakeY);
+    g.setPosition(shakeX, shakeY + this.cameraOffsetY);
+
+    g.fillStyle(COLORS.ink, 0.94);
+    g.fillRect(0, -VIEW_HEIGHT, VIEW_WIDTH, VIEW_HEIGHT + PLAY_TOP);
+    g.fillRect(0, PLAY_BOTTOM, VIEW_WIDTH, VIEW_HEIGHT * 2);
 
     const transition = this.model.chapterTransition();
     const from = transition?.from ?? this.model.chapter;
@@ -691,6 +710,26 @@ export class AviaryScene extends Phaser.Scene {
       g.fillRect(rect.x, rect.flipY ? rect.y : rect.y + rect.h - 3, rect.w, 3);
       return;
     }
+    if (rect.kind === "barbs") {
+      g.fillStyle(COLORS.shadow, 1);
+      const baseY = rect.flipY ? rect.y : rect.y + rect.h - 5;
+      g.fillRect(rect.x, baseY, rect.w, 5);
+      g.fillStyle(COLORS.coral, 1);
+      const widths = [8, 11, 7, 10];
+      let cursor = rect.x;
+      let index = 0;
+      while (cursor < rect.x + rect.w) {
+        const width = Math.min(widths[index % widths.length] ?? 8, rect.x + rect.w - cursor);
+        const depth = rect.h - 3 - (index % 2) * 4;
+        if (rect.flipY) g.fillTriangle(cursor, rect.y, cursor + width / 2, rect.y + depth, cursor + width, rect.y);
+        else g.fillTriangle(cursor, rect.y + rect.h, cursor + width / 2, rect.y + rect.h - depth, cursor + width, rect.y + rect.h);
+        cursor += width;
+        index += 1;
+      }
+      g.fillStyle(COLORS.cream, 0.75);
+      for (let x = rect.x + 4; x < rect.x + rect.w - 2; x += 9) g.fillRect(x, baseY + 1, 2, 2);
+      return;
+    }
     if (rect.kind === "wire") {
       g.fillStyle(COLORS.coral, 1);
       g.fillRect(rect.x + 2, rect.y, Math.max(2, rect.w - 4), rect.h);
@@ -713,6 +752,23 @@ export class AviaryScene extends Phaser.Scene {
       else g.fillTriangle(rect.x, rect.y + rect.h, rect.x + rect.w, rect.y + rect.h, rect.x + rect.w / 2, rect.y);
       g.fillStyle(COLORS.cream, 0.72);
       g.fillCircle(rect.x + rect.w / 2, rect.flipY ? rect.y + 5 : rect.y + rect.h - 5, 2);
+      return;
+    }
+    if (rect.kind === "spinner") {
+      const centerX = rect.x + rect.w / 2;
+      const centerY = rect.y + rect.h / 2;
+      const radius = Math.min(rect.w, rect.h) / 2 - 3;
+      const rotation = this.settings.reducedMotion ? 0 : this.uiTime * 3.4;
+      g.fillStyle(COLORS.coral, 1);
+      g.fillCircle(centerX, centerY, radius);
+      for (let tooth = 0; tooth < 8; tooth += 1) {
+        const angle = rotation + tooth * Math.PI / 4;
+        g.fillRect(Math.round(centerX + Math.cos(angle) * (radius + 1)) - 2, Math.round(centerY + Math.sin(angle) * (radius + 1)) - 2, 4, 4);
+      }
+      g.fillStyle(COLORS.ink, 1);
+      g.fillCircle(centerX, centerY, Math.max(2, radius - 4));
+      g.fillStyle(COLORS.cream, 0.9);
+      g.fillRect(centerX - 1, centerY - 1, 3, 3);
     }
   }
 
@@ -792,7 +848,7 @@ export class AviaryScene extends Phaser.Scene {
     for (const particle of this.particles) {
       const alpha = Math.min(1, particle.life * 3);
       g.fillStyle(particle.color, alpha);
-      g.fillRect(Math.round(particle.x), Math.round(particle.y), 2, 1);
+      g.fillRect(Math.round(particle.x), Math.round(particle.y + this.cameraOffsetY), 2, 1);
     }
     if (this.pulse > 0) {
       const max = this.settings.reducedMotion ? 0.04 : 0.2;

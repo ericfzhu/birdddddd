@@ -1,6 +1,7 @@
 export type GameMode = "ready" | "playing" | "paused" | "dead";
 export type SurfacePreference = "any" | "top" | "bottom";
-export type HazardKind = "thorns" | "wire" | "shutter" | "beak";
+export type HazardKind = "thorns" | "barbs" | "wire" | "shutter" | "beak" | "spinner";
+export type HazardAttachment = "ceiling" | "floor" | "floating";
 
 export interface Envelope {
   surface: SurfacePreference;
@@ -26,6 +27,7 @@ export interface SolidSpec extends RectSpec {
 
 export interface HazardSpec extends RectSpec {
   kind: HazardKind;
+  attachment?: HazardAttachment;
   motion?: MotionSpec;
   flipY?: boolean;
 }
@@ -77,6 +79,7 @@ export type GameEvent =
 export interface VisibleRect extends RectSpec {
   kind: "solid" | HazardKind;
   detail?: string;
+  attachment?: HazardAttachment;
   flipY?: boolean;
   chapter: number;
   decoration: ChunkDefinition["decoration"];

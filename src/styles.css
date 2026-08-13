@@ -1,6 +1,6 @@
 :root {
   color-scheme: dark;
-  font-family: "Courier New", ui-monospace, monospace;
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, monospace;
   background: #0d0e1a;
   color: #f6e7c1;
   font-synthesis: none;

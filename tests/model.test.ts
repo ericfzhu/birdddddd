@@ -3,6 +3,7 @@ import { CHAPTERS, FIXED_STEP_SECONDS, FLIP_DEBOUNCE_SECONDS, PLAY_TOP, PLAYER_H
 import { CHUNKS, TRANSITION_CHUNKS, envelopesCompatible, validateChunkLibrary } from "../src/game/chunks";
 import { GameModel } from "../src/game/model";
 import { canTraverseChunk } from "../src/game/solver";
+import { CAMERA_DEAD_ZONE_BOTTOM, CAMERA_DEAD_ZONE_TOP, cameraTargetY, trackCameraY } from "../src/game/camera";
 import type { ActiveChunk, ChunkDefinition } from "../src/game/types";
 
 const safeChunk = (feathers: Array<{ x: number; y: number }> = []): ChunkDefinition => ({
@@ -25,6 +26,16 @@ const activate = (definition: ChunkDefinition, startX = 0): ActiveChunk => ({
 });
 
 describe("birdddddd model", () => {
+  it("keeps the player inside a small vertical camera dead zone while preserving world position", () => {
+    const upwardTarget = cameraTargetY(0, 40, "playing");
+    const downwardTarget = cameraTargetY(0, 140, "playing");
+    expect(40 + upwardTarget).toBe(CAMERA_DEAD_ZONE_TOP);
+    expect(140 + downwardTarget).toBe(CAMERA_DEAD_ZONE_BOTTOM);
+    expect(cameraTargetY(24, 66, "playing")).toBe(24);
+    expect(cameraTargetY(24, 66, "ready")).toBe(0);
+    expect(trackCameraY(0, upwardTarget, 1, false)).toBeCloseTo(upwardTarget, 3);
+  });
+
   it("preserves velocity when gravity flips", () => {
     const model = new GameModel(123);
     model.action();
@@ -81,6 +92,26 @@ describe("birdddddd model", () => {
     for (let chapter = 0; chapter < 4; chapter += 1) {
       expect(CHUNKS.filter((chunk) => chunk.chapter === chapter)).toHaveLength(6);
     }
+  });
+
+  it("authors hazards across both surfaces plus static and moving open air", () => {
+    const hazards = CHUNKS.flatMap((chunk) => chunk.hazards);
+    expect(hazards.some((hazard) => hazard.kind === "barbs" && hazard.attachment === "ceiling")).toBe(true);
+    expect(hazards.some((hazard) => hazard.kind === "barbs" && hazard.attachment === "floor")).toBe(true);
+    expect(hazards.some((hazard) => hazard.kind === "spinner" && !hazard.motion)).toBe(true);
+    expect(hazards.some((hazard) => hazard.kind === "spinner" && hazard.motion)).toBe(true);
+  });
+
+  it("treats a floating spinner as lethal terrain", () => {
+    const model = new GameModel(81);
+    const spinnerChunk: ChunkDefinition = {
+      ...safeChunk(),
+      hazards: [{ x: PLAYER_X, y: model.playerY - 5, w: 12, h: 12, kind: "spinner", attachment: "floating" }],
+    };
+    model.chunks = [activate(spinnerChunk)];
+    model.mode = "playing";
+    model.step();
+    expect(model.mode).toBe("dead");
   });
 
   it("inserts a safe non-scoring passage when a chapter threshold is crossed", () => {
