@@ -64,9 +64,11 @@ No cross-origin API or CORS permission is required for the iframe. Best score, m
 - Deterministic 60 Hz custom physics with momentum-preserving gravity flips
 - Twenty-four authored chunks across four escalating chapters
 - Four continuous tile-world biomes: Verdant Wilds, Sunken Dunes, Violet Chasm, and Ashen Depths, with rooted vegetation, layered terrain, embedded materials, and parallax horizons
+- Authored raster terrain, panorama, and prop atlases with optimized nearest-neighbour runtime copies; editable high-resolution sources live under `art/source`
 - Rising and falling tunnel profiles with persistent slope/pillar pushback and left-edge failure
 - Compatibility metadata and discrete physics traversal checks for chunk transitions
 - Gate scoring, optional three-feather bonus chains, local best-score/settings persistence
-- Original code-drawn pixel art and procedurally synthesized chiptune/SFX—no borrowed game assets
+- Original authored raster environments, a code-drawn animated bird, and procedurally synthesized chiptune/SFX
+- Original generated raster source art is checked into the repository; no Terraria assets are included
 
 Automated browser checks can inspect the live game through `window.render_game_to_text()` and advance it deterministically through `window.advanceTime(ms)`.
