@@ -19,6 +19,28 @@
             <div class="hud-text hud-result" id="hud-result"></div>
             <div class="hud-text hud-helper" id="hud-helper"></div>
           </div>
+          <div class="game-controls" aria-label="Game controls">
+            <button class="hud-control hud-control-pause" id="hud-pause" type="button" aria-label="Pause game" data-state="playing">
+              <svg class="hud-control-icon icon-pause" viewBox="0 0 24 24" aria-hidden="true">
+                <rect x="5" y="4" width="5" height="16"></rect>
+                <rect x="14" y="4" width="5" height="16"></rect>
+              </svg>
+              <svg class="hud-control-icon icon-play" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M7 4.5 20 12 7 19.5Z"></path>
+              </svg>
+            </button>
+            <button class="hud-control hud-control-sound" id="hud-sound" type="button" aria-label="Mute sound" data-state="audible">
+              <svg class="hud-control-icon icon-audible" viewBox="0 0 24 24" aria-hidden="true">
+                <path class="speaker-body" d="M3 9h4l5-4v14l-5-4H3Z"></path>
+                <path class="speaker-wave" d="M15 8.5a5 5 0 0 1 0 7"></path>
+                <path class="speaker-wave" d="M18 6a8 8 0 0 1 0 12"></path>
+              </svg>
+              <svg class="hud-control-icon icon-muted" viewBox="0 0 24 24" aria-hidden="true">
+                <path class="speaker-body" d="M3 9h4l5-4v14l-5-4H3Z"></path>
+                <path class="mute-mark" d="m16 9 5 6m0-6-5 6"></path>
+              </svg>
+            </button>
+          </div>
         </div>
       </section>
     </main>

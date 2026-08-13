@@ -66,9 +66,9 @@ canvas {
   image-rendering: crisp-edges;
 }
 
-.game-hud {
+.game-hud,
+.game-controls {
   position: absolute;
-  z-index: 2;
   top: 50%;
   left: 50%;
   width: min(100dvw, 177.7778dvh);
@@ -77,6 +77,96 @@ canvas {
   container-type: inline-size;
   pointer-events: none;
   transform: translate(-50%, -50%);
+}
+
+.game-hud {
+  z-index: 2;
+}
+
+.game-controls {
+  z-index: 3;
+}
+
+.hud-control {
+  position: absolute;
+  top: 9.4444%;
+  width: 9.375%;
+  height: 11.1111%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #f6e7c1;
+  cursor: pointer;
+  pointer-events: auto;
+  transition-property: scale;
+  transition-duration: 100ms;
+  transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
+}
+
+.hud-control:active {
+  scale: 0.96;
+}
+
+.hud-control:focus-visible {
+  outline: 2px solid #f2b544;
+  outline-offset: -3px;
+}
+
+.hud-control-pause {
+  right: 13.125%;
+}
+
+.hud-control-sound {
+  right: 1.875%;
+}
+
+.hud-control-icon {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 62%;
+  height: 78%;
+  overflow: visible;
+  fill: currentColor;
+  stroke: none;
+  opacity: 1;
+  filter: blur(0);
+  transform: translate(-50%, -50%) scale(1);
+  transition-property: opacity, filter, transform;
+  transition-duration: 160ms;
+  transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
+}
+
+.hud-control-icon .speaker-wave,
+.hud-control-icon .mute-mark {
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+}
+
+.hud-control-icon .mute-mark {
+  stroke: #ef5b62;
+  stroke-width: 2.4;
+}
+
+.icon-play,
+.icon-muted,
+.hud-control-pause[data-state="paused"] .icon-pause,
+.hud-control-sound[data-state="muted"] .icon-audible {
+  opacity: 0;
+  filter: blur(4px);
+  transform: translate(-50%, -50%) scale(0.25);
+}
+
+.hud-control-pause[data-state="paused"] .icon-play,
+.hud-control-sound[data-state="muted"] .icon-muted {
+  opacity: 1;
+  filter: blur(0);
+  transform: translate(-50%, -50%) scale(1);
 }
 
 .hud-text {

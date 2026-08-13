@@ -55,6 +55,8 @@ export class AviaryScene extends Phaser.Scene {
   private chapterText!: HudText;
   private resultText!: HudText;
   private helperText!: HudText;
+  private pauseControl!: HTMLButtonElement;
+  private soundControl!: HTMLButtonElement;
   private audio!: AudioDirector;
   private accumulator = 0;
   private cameraOffsetY = 0;
@@ -149,6 +151,13 @@ export class AviaryScene extends Phaser.Scene {
   }
 
   private bindInput(): void {
+    const pauseControl = document.querySelector<HTMLButtonElement>("#hud-pause");
+    const soundControl = document.querySelector<HTMLButtonElement>("#hud-sound");
+    if (!pauseControl || !soundControl) throw new Error("Missing game HUD controls.");
+    this.pauseControl = pauseControl;
+    this.soundControl = soundControl;
+    this.pauseControl.addEventListener("click", () => this.togglePause());
+    this.soundControl.addEventListener("click", () => this.toggleMute());
     this.input.keyboard?.on("keydown-SPACE", (event: KeyboardEvent) => {
       event.preventDefault();
       this.primaryAction();
@@ -882,6 +891,7 @@ export class AviaryScene extends Phaser.Scene {
     this.promptText.setVisible(mode === "ready");
     this.resultText.setVisible(revealDeathPanel);
     this.helperText.setVisible(revealDeathPanel || mode === "paused");
+    this.syncControlState();
 
     if (mode === "ready") {
       this.titleText.setY(57 + Math.sin(this.uiTime * 2.5) * 1.5);
@@ -893,7 +903,7 @@ export class AviaryScene extends Phaser.Scene {
       this.drawPixelPanel(g, 86, 36, 148, 93, 0);
     }
 
-    this.drawTopButtons(g);
+    this.drawTopButtonFrames(g);
     this.drawChain(g);
 
     if (this.chapterBanner > 0 && mode === "playing") {
@@ -925,8 +935,15 @@ export class AviaryScene extends Phaser.Scene {
     }
   }
 
-  private drawTopButtons(g: Phaser.GameObjects.Graphics): void {
+  private syncControlState(): void {
     const paused = this.model.mode === "paused";
+    this.pauseControl.dataset.state = paused ? "paused" : "playing";
+    this.pauseControl.setAttribute("aria-label", paused ? "Resume game" : "Pause game");
+    this.soundControl.dataset.state = this.settings.muted ? "muted" : "audible";
+    this.soundControl.setAttribute("aria-label", this.settings.muted ? "Unmute sound" : "Mute sound");
+  }
+
+  private drawTopButtonFrames(g: Phaser.GameObjects.Graphics): void {
     const biome = BIOMES[this.model.chapter] ?? BIOMES[0];
     g.fillStyle(biome.terrainDark, 0.82);
     g.fillRect(248, 17, 30, 20);
@@ -934,27 +951,6 @@ export class AviaryScene extends Phaser.Scene {
     g.lineStyle(1, biome.surface, 0.7);
     g.strokeRect(248, 17, 30, 20);
     g.strokeRect(284, 17, 30, 20);
-    g.fillStyle(COLORS.cream, 0.9);
-    if (paused) {
-      g.fillTriangle(259, 22, 259, 32, 269, 27);
-    } else {
-      g.fillRect(257, 22, 3, 10);
-      g.fillRect(266, 22, 3, 10);
-    }
-    g.fillRect(291, 25, 5, 5);
-    g.fillTriangle(296, 25, 301, 21, 301, 34);
-    if (this.settings.muted) {
-      g.lineStyle(2, COLORS.coral, 1);
-      g.lineBetween(303, 22, 310, 33);
-    } else {
-      g.lineStyle(1, COLORS.cream, 0.9);
-      g.lineBetween(303, 24, 305, 26);
-      g.lineBetween(305, 26, 305, 29);
-      g.lineBetween(305, 29, 303, 31);
-      g.lineBetween(306, 21, 309, 24);
-      g.lineBetween(309, 24, 309, 31);
-      g.lineBetween(309, 31, 306, 34);
-    }
   }
 
   private drawPixelPanel(g: Phaser.GameObjects.Graphics, x: number, y: number, width: number, height: number, chapter: number): void {
