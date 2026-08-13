@@ -195,6 +195,39 @@ describe("birdddddd model", () => {
     expect(model.playerX).toBeCloseTo(shovedX, 5);
   });
 
+  it("lets the bird pass horizontal platform edges without pushback while retaining landings", () => {
+    const sideContactChunk: ChunkDefinition = {
+      ...safeChunk(),
+      id: "test-perch-side",
+      solids: [{ x: 72, y: 58, w: 48, h: 6, detail: "perch" }],
+    };
+    const sideContact = new GameModel(86);
+    sideContact.chunks = [activate(sideContactChunk, 20)];
+    sideContact.mode = "playing";
+    sideContact.playerY = 61;
+    sideContact.velocityY = 0;
+
+    sideContact.step();
+    expect(sideContact.mode).toBe("playing");
+    expect(sideContact.playerX).toBe(PLAYER_X);
+
+    const landingChunk: ChunkDefinition = {
+      ...safeChunk(),
+      id: "test-perch-landing",
+      solids: [{ x: 45, y: 100, w: 80, h: 6, detail: "perch" }],
+    };
+    const landing = new GameModel(87);
+    landing.chunks = [activate(landingChunk, 20)];
+    landing.mode = "playing";
+    landing.playerY = 88;
+    landing.velocityY = 70;
+
+    landing.advance(220);
+    expect(landing.mode).toBe("playing");
+    expect(landing.velocityY).toBe(0);
+    expect(landing.isGrounded()).toBe(true);
+  });
+
   it("treats a floating spinner as lethal terrain", () => {
     const model = new GameModel(81);
     const spinnerChunk: ChunkDefinition = {

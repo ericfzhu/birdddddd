@@ -386,6 +386,9 @@ export class GameModel {
           }
         }
 
+        // Perches are one-way horizontal surfaces: they catch the bird from the
+        // active gravity side, but their thin leading/trailing edges never shove.
+        if (solid.detail === "perch") continue;
         const overlapsHorizontally = this.playerX + halfWidth > left && this.playerX - halfWidth < left + solid.w;
         const overlapsVertically = this.playerY + halfHeight > solidY && this.playerY - halfHeight < solidY + solid.h;
         if (!overlapsHorizontally || !overlapsVertically) continue;
