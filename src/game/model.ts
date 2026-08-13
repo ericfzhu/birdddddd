@@ -12,7 +12,7 @@ import {
   PLAYER_WIDTH,
   PLAYER_X,
   RESTART_DELAY_SECONDS,
-  TERRAIN_SPIKE_MIN_SCALE,
+  TERRAIN_SPIKE_COLLISION_RATIO,
   VIEW_WIDTH,
   chapterForGates,
 } from "./constants";
@@ -428,7 +428,7 @@ export class GameModel {
         const motion = this.motionOffset(hazard);
         if (!this.hazardIsActive(hazard)) continue;
         const terrainSpike = hazard.kind === "thorns" || hazard.kind === "barbs";
-        const collisionHeight = terrainSpike ? hazard.h * TERRAIN_SPIKE_MIN_SCALE : hazard.h;
+        const collisionHeight = terrainSpike ? hazard.h * TERRAIN_SPIKE_COLLISION_RATIO : hazard.h;
         const ceilingSpike = hazard.attachment === "ceiling" || hazard.flipY === true;
         const collisionInsetY = terrainSpike && !ceilingSpike ? hazard.h - collisionHeight : 0;
         const rect = {

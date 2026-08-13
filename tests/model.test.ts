@@ -4,6 +4,7 @@ import { CHUNKS, TRANSITION_CHUNKS, envelopesCompatible, tunnelOffsetAt, validat
 import { GameModel } from "../src/game/model";
 import { canTraverseChunk } from "../src/game/solver";
 import { CAMERA_DEAD_ZONE_BOTTOM, CAMERA_DEAD_ZONE_TOP, cameraTargetY, trackCameraY } from "../src/game/camera";
+import { spikeClusterLayout, TERRAIN_SPIKE_POINT_WIDTH } from "../src/game/hazards";
 import type { ActiveChunk, ChunkDefinition } from "../src/game/types";
 
 const safeChunk = (feathers: Array<{ x: number; y: number }> = []): ChunkDefinition => ({
@@ -322,7 +323,17 @@ describe("birdddddd model", () => {
     expect(model.mode).toBe("dead");
   });
 
-  it("keeps variable floor spikes fair by colliding at their shortest visible depth", () => {
+  it("uses uniform individual spike geometry while varying the number of points", () => {
+    const threePoints = spikeClusterLayout(24);
+    const fourPoints = spikeClusterLayout(32);
+    const fivePoints = spikeClusterLayout(36);
+    expect(threePoints).toHaveLength(3);
+    expect(fourPoints).toHaveLength(4);
+    expect(fivePoints).toHaveLength(5);
+    expect([...threePoints, ...fourPoints, ...fivePoints].every((point) => point.width === TERRAIN_SPIKE_POINT_WIDTH)).toBe(true);
+  });
+
+  it("collides terrain spikes at their uniform visible height", () => {
     const spikeChunk: ChunkDefinition = {
       ...safeChunk(),
       hazards: [{ x: PLAYER_X - 6, y: PLAY_BOTTOM - 20, w: 12, h: 20, kind: "thorns", attachment: "floor" }],
@@ -331,12 +342,12 @@ describe("birdddddd model", () => {
     model.chunks = [activate(spikeChunk)];
     model.mode = "playing";
     model.gravity = -1;
-    model.playerY = 146;
+    model.playerY = 140;
 
     model.step();
     expect(model.mode).toBe("playing");
 
-    model.playerY = 154;
+    model.playerY = 146;
     model.step();
     expect(model.mode).toBe("dead");
   });
