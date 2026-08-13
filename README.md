@@ -12,6 +12,8 @@ A one-button endless arcade game about a bedraggled fledgling escaping a strange
 
 The game is designed for landscape screens. On phone-sized touch devices held in portrait, only the orientation screen loads. Phaser initializes after the phone is turned sideways; returning to portrait suspends the current run until landscape is restored.
 
+In landscape, the game host fills the browser viewport by default. The fixed 16:9 playfield is aspect-fitted against a matching background so gameplay geometry remains undistorted on unusually wide or tall screens. Browser-native fullscreen is still available with **F**.
+
 ## Development
 
 Node.js 22.12 or newer and Yarn 3.6.3 are required. With NVM installed:
