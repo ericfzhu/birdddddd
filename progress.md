@@ -20,6 +20,8 @@ Original prompt: Implement the complete “Impossible Aviary — Gameplay and Ar
 - Added three authored, hazard-free, non-scoring transition passages. Background motifs and boundary construction crossfade according to the bird's physical position in each passage, and the next chapter announcement now appears on entry rather than at the distant score threshold.
 - Added a local `?previewChapter=0..3` visual-test route so each complete environment can be inspected directly without weakening normal progression.
 - Fixed missed-feather lifecycle: passing one still resets the three-feather chain immediately, but its sprite now continues scrolling until it naturally exits the left edge instead of popping out beside the bird.
+- Added explicit deterministic character animation states: grounded running with alternating feet and body bob, stronger two-pose airborne flutter, landing squash, and a readable stunned/death pose before the feather burst and results panel.
+- Added non-colliding authored prop families behind the gameplay layer: nursery feeders and nests, clockwork gears and springs, hanging bells, wind-up eggs, and passive background birds that become stranger in later chapters. Props stay in subdued cream/teal/shadow shades so yolk and coral retain their gameplay meaning.
 
 ## TODO
 
@@ -34,3 +36,4 @@ Original prompt: Implement the complete “Impossible Aviary — Gameplay and Ar
 - Yarn conversion verification: 9/9 tests pass, production build succeeds, Vite serves at `http://localhost:5173`, and the gameplay screenshot/state output still match.
 - Chapter environment verification: `yarn test` passes 10/10, the production build succeeds, direct screenshots confirm all four environments are visually distinct, and a live-input Playwright run remains console-error free.
 - Feather lifecycle verification: `yarn test` passes 11/11; a deterministic browser capture shows a missed feather still rendered at x=73 after passing the bird at x=90, with the chain reset and no console errors.
+- Character/prop verification: `yarn test` passes 12/12; direct chapter captures show the new prop layer without obscuring hazards, and deterministic browser sequences verify `run`, `flutter`, `stunned`, `gone`, score-panel reveal, restart, and the next gravity input with no console errors.
