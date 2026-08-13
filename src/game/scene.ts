@@ -103,7 +103,7 @@ export class AviaryScene extends Phaser.Scene {
     }
     this.terrainBase = this.add.graphics();
     this.terrainTiles = this.add.container();
-    for (let index = 0; index < 640; index += 1) {
+    for (let index = 0; index < 768; index += 1) {
       const tile = this.add.image(0, 0, "biome-terrain-atlas", 0).setOrigin(0, 0).setVisible(false);
       this.terrainTiles.add(tile);
       this.terrainTilePool.push(tile);
@@ -353,19 +353,21 @@ export class AviaryScene extends Phaser.Scene {
     g.clear();
     const shakeX = this.shake > 0 ? Math.sin(this.uiTime * 120) * 1.4 : 0;
     const shakeY = this.shake > 0 ? Math.cos(this.uiTime * 90) * 1.1 : 0;
-    base.setPosition(shakeX, shakeY + this.cameraOffsetY);
-    this.terrainTiles.setPosition(shakeX, shakeY + this.cameraOffsetY);
-    this.propLayer.setPosition(shakeX, shakeY + this.cameraOffsetY);
-    g.setPosition(shakeX, shakeY + this.cameraOffsetY);
+    const renderX = Math.round(shakeX);
+    const renderY = Math.round(shakeY + this.cameraOffsetY);
+    base.setPosition(renderX, renderY);
+    this.terrainTiles.setPosition(renderX, renderY);
+    this.propLayer.setPosition(renderX, renderY);
+    g.setPosition(renderX, renderY);
 
     const transition = this.model.chapterTransition();
     const from = transition?.from ?? this.model.chapter;
     const to = transition?.to ?? from;
     const progress = transition?.progress ?? 0;
-    const tunnel = this.model.visibleTunnelPoints();
+    const tunnel = this.renderTunnelPoints();
     this.drawTunnelFill(base, tunnel, from, 1 - progress);
     if (to !== from) this.drawTunnelFill(base, tunnel, to, progress);
-    this.renderTerrainTiles(tunnel, from, to, progress);
+    this.renderTerrainTiles(tunnel, from, to, progress, renderY);
     this.renderChunkDecorations(tunnel);
     this.drawTunnelRails(g, tunnel, from, 1 - progress);
     if (to !== from) this.drawTunnelRails(g, tunnel, to, progress);
@@ -376,6 +378,21 @@ export class AviaryScene extends Phaser.Scene {
       if (!feather.collected) this.drawFeather(g, feather.x, feather.y, 1);
     }
     if (this.model.animationState() !== "gone") this.drawBird(g);
+  }
+
+  private renderTunnelPoints(step = 4): VisibleTunnelPoint[] {
+    const points: VisibleTunnelPoint[] = [];
+    const firstWorldX = Math.floor((this.model.distance - step) / step) * step;
+    const lastWorldX = this.model.distance + VIEW_WIDTH + step;
+    for (let worldX = firstWorldX; worldX <= lastWorldX; worldX += step) {
+      const offset = this.model.terrainOffsetAtWorldX(worldX);
+      points.push({
+        x: worldX - this.model.distance,
+        ceiling: PLAY_TOP + offset,
+        floor: PLAY_BOTTOM + offset,
+      });
+    }
+    return points;
   }
 
   private drawTunnelFill(g: Phaser.GameObjects.Graphics, tunnel: VisibleTunnelPoint[], chapter: number, alpha: number): void {
@@ -392,22 +409,42 @@ export class AviaryScene extends Phaser.Scene {
 
   private tunnelPointAt(tunnel: VisibleTunnelPoint[], x: number): VisibleTunnelPoint | undefined {
     if (tunnel.length === 0) return undefined;
-    const index = Math.max(0, Math.min(tunnel.length - 1, Math.round(x / 4)));
-    return tunnel[index];
+    const first = tunnel[0];
+    const last = tunnel.at(-1);
+    if (!first || !last) return undefined;
+    if (x <= first.x) return first;
+    if (x >= last.x) return last;
+    for (let index = 1; index < tunnel.length; index += 1) {
+      const right = tunnel[index];
+      const left = tunnel[index - 1];
+      if (!left || !right || x > right.x) continue;
+      const progress = (x - left.x) / Math.max(0.001, right.x - left.x);
+      return {
+        x,
+        ceiling: Phaser.Math.Linear(left.ceiling, right.ceiling, progress),
+        floor: Phaser.Math.Linear(left.floor, right.floor, progress),
+      };
+    }
+    return last;
   }
 
-  private renderTerrainTiles(tunnel: VisibleTunnelPoint[], from: number, to: number, progress: number): void {
+  private renderTerrainTiles(tunnel: VisibleTunnelPoint[], from: number, to: number, progress: number, renderY: number): void {
     for (const tile of this.terrainTilePool) tile.setVisible(false);
     const tileSize = 8;
     const samplesPerAxis = 8;
-    const distanceColumn = Math.floor(this.model.distance / tileSize);
-    const drift = -((this.model.distance % tileSize + tileSize) % tileSize);
+    const firstWorldColumn = Math.floor((this.model.distance - tileSize) / tileSize);
+    const lastWorldColumn = Math.ceil((this.model.distance + VIEW_WIDTH + tileSize) / tileSize);
+    const visibleTop = -renderY - tileSize;
+    const visibleBottom = VIEW_HEIGHT - renderY + tileSize;
     let poolIndex = 0;
-    for (let x = drift - tileSize; x < VIEW_WIDTH + tileSize; x += tileSize) {
+    for (let worldColumn = firstWorldColumn; worldColumn <= lastWorldColumn; worldColumn += 1) {
+      const worldX = worldColumn * tileSize;
+      const x = worldX - this.model.distance;
       const point = this.tunnelPointAt(tunnel, x + tileSize / 2);
       if (!point) continue;
-      const worldColumn = distanceColumn + Math.round((x - drift) / tileSize);
-      for (let layer = 0; layer < 7; layer += 1) {
+      const topLayers = Math.max(0, Math.ceil((point.ceiling - visibleTop) / tileSize));
+      const bottomLayers = Math.max(0, Math.ceil((visibleBottom - point.floor) / tileSize));
+      const drawTile = (layer: number, top: boolean): boolean => {
         const mixHash = Math.abs((worldColumn * 37 + layer * 17) % 100) / 100;
         const chapter = to !== from && mixHash < progress ? to : from;
         const sourceHash = Math.abs(worldColumn * 73 + layer * 151 + chapter * 997);
@@ -416,27 +453,19 @@ export class AviaryScene extends Phaser.Scene {
         const atlasColumn = (chapter % 2) * samplesPerAxis + sourceColumn;
         const atlasRow = Math.floor(chapter / 2) * samplesPerAxis + sourceRow;
         const textureFrame = atlasRow * 16 + atlasColumn;
-        const tileX = Math.floor(x);
-        const topY = Math.floor(point.ceiling - (layer + 1) * tileSize);
-        const bottomY = Math.floor(point.floor + layer * tileSize);
-        const topTile = this.terrainTilePool[poolIndex++];
-        const bottomTile = this.terrainTilePool[poolIndex++];
-        if (!topTile || !bottomTile) return;
-        topTile
+        const tile = this.terrainTilePool[poolIndex++];
+        if (!tile) return false;
+        tile
           .setFrame(textureFrame)
           .setCrop()
           .setDisplaySize(tileSize + 0.25, tileSize + 0.25)
-          .setPosition(tileX, topY)
-          .setFlipY(true)
+          .setPosition(Math.round(x), Math.round(top ? point.ceiling - (layer + 1) * tileSize : point.floor + layer * tileSize))
+          .setFlipY(top)
           .setVisible(true);
-        bottomTile
-          .setFrame(textureFrame)
-          .setCrop()
-          .setDisplaySize(tileSize + 0.25, tileSize + 0.25)
-          .setPosition(tileX, bottomY)
-          .setFlipY(false)
-          .setVisible(true);
-      }
+        return true;
+      };
+      for (let layer = 0; layer < topLayers; layer += 1) if (!drawTile(layer, true)) return;
+      for (let layer = 0; layer < bottomLayers; layer += 1) if (!drawTile(layer, false)) return;
     }
   }
 
@@ -463,7 +492,7 @@ export class AviaryScene extends Phaser.Scene {
     }
     const drift = -((this.model.distance % spacing + spacing) % spacing);
     for (let x = drift; x < VIEW_WIDTH + spacing; x += spacing) {
-      const point = tunnel[Math.max(0, Math.min(tunnel.length - 1, Math.round((x + 4) / 4)))];
+      const point = this.tunnelPointAt(tunnel, x + 4);
       if (!point) continue;
       if (chapter === 0) {
         g.fillStyle(biome.accent, 0.92 * alpha);
@@ -615,6 +644,61 @@ export class AviaryScene extends Phaser.Scene {
     for (let y = rect.y + 4; y < rect.y + rect.h - 1; y += 9) g.fillRect(rect.x, y, rect.w, 2);
   }
 
+  private terrainSurfaceYAt(x: number, ceiling: boolean): number {
+    const offset = this.model.terrainOffsetAtWorldX(this.model.distance + x);
+    return (ceiling ? PLAY_TOP : PLAY_BOTTOM) + offset;
+  }
+
+  private terrainInwardNormalAt(x: number, ceiling: boolean): Phaser.Math.Vector2 {
+    const sampleRadius = 2;
+    const leftOffset = this.model.terrainOffsetAtWorldX(this.model.distance + x - sampleRadius);
+    const rightOffset = this.model.terrainOffsetAtWorldX(this.model.distance + x + sampleRadius);
+    const slope = (rightOffset - leftOffset) / (sampleRadius * 2);
+    const length = Math.hypot(1, slope);
+    return ceiling
+      ? new Phaser.Math.Vector2(-slope / length, 1 / length)
+      : new Phaser.Math.Vector2(slope / length, -1 / length);
+  }
+
+  private drawTerrainPlate(
+    g: Phaser.GameObjects.Graphics,
+    left: number,
+    right: number,
+    ceiling: boolean,
+    thickness: number,
+  ): void {
+    const leftY = this.terrainSurfaceYAt(left, ceiling);
+    const rightY = this.terrainSurfaceYAt(right, ceiling);
+    const leftNormal = this.terrainInwardNormalAt(left, ceiling);
+    const rightNormal = this.terrainInwardNormalAt(right, ceiling);
+    const outerLeftX = left - leftNormal.x * thickness;
+    const outerLeftY = leftY - leftNormal.y * thickness;
+    const outerRightX = right - rightNormal.x * thickness;
+    const outerRightY = rightY - rightNormal.y * thickness;
+    g.fillTriangle(left, leftY, right, rightY, outerRightX, outerRightY);
+    g.fillTriangle(left, leftY, outerRightX, outerRightY, outerLeftX, outerLeftY);
+  }
+
+  private drawTerrainSpike(
+    g: Phaser.GameObjects.Graphics,
+    left: number,
+    right: number,
+    depth: number,
+    ceiling: boolean,
+  ): void {
+    const center = (left + right) / 2;
+    const baseY = this.terrainSurfaceYAt(center, ceiling);
+    const normal = this.terrainInwardNormalAt(center, ceiling);
+    g.fillTriangle(
+      left,
+      this.terrainSurfaceYAt(left, ceiling),
+      center + normal.x * depth,
+      baseY + normal.y * depth,
+      right,
+      this.terrainSurfaceYAt(right, ceiling),
+    );
+  }
+
   private drawRectEntity(g: Phaser.GameObjects.Graphics, rect: VisibleRect): void {
     if (rect.kind === "solid") {
       if (rect.detail === "cage") {
@@ -626,23 +710,23 @@ export class AviaryScene extends Phaser.Scene {
     }
     if (rect.kind === "thorns") {
       const biome = BIOMES[rect.chapter] ?? BIOMES[0];
+      const ceiling = rect.attachment === "ceiling" || rect.flipY === true;
       g.fillStyle(biome.danger, 1);
       const count = Math.max(1, Math.ceil(rect.w / 7));
       const unit = rect.w / count;
       for (let index = 0; index < count; index += 1) {
         const left = rect.x + index * unit;
-        if (rect.flipY) g.fillTriangle(left, rect.y, left + unit / 2, rect.y + rect.h, left + unit, rect.y);
-        else g.fillTriangle(left, rect.y + rect.h, left + unit / 2, rect.y, left + unit, rect.y + rect.h);
+        this.drawTerrainSpike(g, left, left + unit, rect.h, ceiling);
       }
       g.fillStyle(biome.terrainDark, 0.8);
-      g.fillRect(rect.x, rect.flipY ? rect.y : rect.y + rect.h - 3, rect.w, 3);
+      this.drawTerrainPlate(g, rect.x, rect.x + rect.w, ceiling, 3);
       return;
     }
     if (rect.kind === "barbs") {
       const biome = BIOMES[rect.chapter] ?? BIOMES[0];
+      const ceiling = rect.attachment === "ceiling" || rect.flipY === true;
       g.fillStyle(biome.terrainDark, 1);
-      const baseY = rect.flipY ? rect.y : rect.y + rect.h - 5;
-      g.fillRect(rect.x, baseY, rect.w, 5);
+      this.drawTerrainPlate(g, rect.x, rect.x + rect.w, ceiling, 5);
       g.fillStyle(biome.danger, 1);
       const widths = [8, 11, 7, 10];
       let cursor = rect.x;
@@ -650,13 +734,16 @@ export class AviaryScene extends Phaser.Scene {
       while (cursor < rect.x + rect.w) {
         const width = Math.min(widths[index % widths.length] ?? 8, rect.x + rect.w - cursor);
         const depth = rect.h - 3 - (index % 2) * 4;
-        if (rect.flipY) g.fillTriangle(cursor, rect.y, cursor + width / 2, rect.y + depth, cursor + width, rect.y);
-        else g.fillTriangle(cursor, rect.y + rect.h, cursor + width / 2, rect.y + rect.h - depth, cursor + width, rect.y + rect.h);
+        this.drawTerrainSpike(g, cursor, cursor + width, depth, ceiling);
         cursor += width;
         index += 1;
       }
       g.fillStyle(biome.glow, 0.75);
-      for (let x = rect.x + 4; x < rect.x + rect.w - 2; x += 9) g.fillRect(x, baseY + 1, 2, 2);
+      for (let x = rect.x + 4; x < rect.x + rect.w - 2; x += 9) {
+        const surfaceY = this.terrainSurfaceYAt(x, ceiling);
+        const normal = this.terrainInwardNormalAt(x, ceiling);
+        g.fillRect(Math.round(x - normal.x * 2) - 1, Math.round(surfaceY - normal.y * 2) - 1, 2, 2);
+      }
       return;
     }
     if (rect.kind === "shutter") {
