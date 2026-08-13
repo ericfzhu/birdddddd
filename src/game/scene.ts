@@ -111,7 +111,7 @@ export class AviaryScene extends Phaser.Scene {
     const query = new URLSearchParams(window.location.search);
     const requestedSeed = Number(query.get("seed"));
     const requestedChapter = query.get("previewChapter");
-    const previewChapter = requestedChapter === null ? (import.meta.env.DEV ? 2 : 0) : Number(requestedChapter);
+    const previewChapter = requestedChapter === null ? (import.meta.env.DEV ? 6 : 0) : Number(requestedChapter);
     const seed = Number.isFinite(requestedSeed) && requestedSeed > 0 ? requestedSeed >>> 0 : (Date.now() ^ 0x51a7e) >>> 0;
     this.model = new GameModel(seed, this.settings.bestScore, Number.isFinite(previewChapter) ? previewChapter : 0);
     this.model.reducedMotion = this.settings.reducedMotion;
