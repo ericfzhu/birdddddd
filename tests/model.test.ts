@@ -122,6 +122,78 @@ describe("birdddddd model", () => {
     expect(CHUNKS.flatMap((chunk) => chunk.solids).filter((solid) => solid.detail === "cage").length).toBeGreaterThanOrEqual(8);
   });
 
+  it("introduces a distinct hazard language as chapters progress", () => {
+    const expectedKinds = new Map<number, string[]>([
+      [1, ["vine"]],
+      [2, ["sandJet"]],
+      [3, ["crusher"]],
+      [4, ["crystal"]],
+      [5, ["spore"]],
+      [6, ["cart"]],
+      [7, ["ember"]],
+      [8, ["flame"]],
+    ]);
+    for (const [chapter, kinds] of expectedKinds) {
+      const authored = new Set(CHUNKS.filter((chunk) => chunk.chapter === chapter).flatMap((chunk) => chunk.hazards.map((hazard) => hazard.kind)));
+      for (const kind of kinds) expect(authored.has(kind as never), `chapter ${chapter} should introduce ${kind}`).toBe(true);
+    }
+  });
+
+  it("keeps cyclic vents visible as warnings but lethal only during their active window", () => {
+    const ventChunk: ChunkDefinition = {
+      ...safeChunk(),
+      id: "test-cycle-vent",
+      hazards: [{
+        x: PLAYER_X - 5,
+        y: 80,
+        w: 10,
+        h: 24,
+        kind: "flame",
+        attachment: "floating",
+        cycle: { period: 2, activeRatio: 0.5 },
+      }],
+    };
+    const warning = new GameModel(89);
+    warning.chunks = [activate(ventChunk)];
+    warning.mode = "playing";
+    warning.playerY = 90;
+    warning.simTime = 1.5;
+    expect(warning.visibleRects()[0]?.active).toBe(false);
+    warning.step();
+    expect(warning.mode).toBe("playing");
+
+    const erupting = new GameModel(90);
+    erupting.chunks = [activate(ventChunk)];
+    erupting.mode = "playing";
+    erupting.playerY = 90;
+    expect(erupting.visibleRects()[0]?.active).toBe(true);
+    erupting.step();
+    expect(erupting.mode).toBe("dead");
+  });
+
+  it("moves minecarts horizontally without changing their authored track height", () => {
+    const cartChunk: ChunkDefinition = {
+      ...safeChunk(),
+      id: "test-moving-cart",
+      hazards: [{
+        x: 120,
+        y: 130,
+        w: 30,
+        h: 18,
+        kind: "cart",
+        attachment: "floor",
+        motion: { amplitude: 24, frequency: 0.25, axis: "x" },
+      }],
+    };
+    const model = new GameModel(92);
+    model.chunks = [activate(cartChunk)];
+    const start = model.visibleRects()[0];
+    model.simTime = 1;
+    const shifted = model.visibleRects()[0];
+    expect(shifted?.x).toBeCloseTo((start?.x ?? 0) + 24, 5);
+    expect(shifted?.y).toBe(start?.y);
+  });
+
   it("authors rising and falling tunnel sections that return to compatible flat entrances", () => {
     const tunnelChunks = CHUNKS.filter((chunk) => chunk.tunnel);
     expect(tunnelChunks.length).toBeGreaterThanOrEqual(8);
@@ -311,7 +383,7 @@ describe("birdddddd model", () => {
         (candidate) => candidate.chapter === previous.chapter && candidate.id !== previous.id && envelopesCompatible(previous.exit, candidate.entry),
       );
       for (const next of successors) {
-        const phases = next.hazards.some((hazard) => hazard.motion) ? [0, 0.25, 0.5, 0.75] : [0];
+        const phases = next.hazards.some((hazard) => hazard.motion || hazard.cycle) ? [0, 0.25, 0.5, 0.75] : [0];
         for (const phase of phases) {
           const key = `${next.id}:${previous.exit.surface}:${previous.exit.maxAbsVelocity}:${speed}:${phase}`;
           const reachable = cache.get(key) ?? canTraverseChunk(next, previous.exit, speed, phase);

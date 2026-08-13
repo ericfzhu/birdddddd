@@ -177,16 +177,19 @@ export class GameModel {
         }
       }
       for (const hazard of active.definition.hazards) {
-        const x = origin + hazard.x;
+        const motion = this.motionOffset(hazard);
+        const x = origin + hazard.x + motion.x;
         const tunnelOffset = tunnelOffsetAt(active.definition, hazard.x + hazard.w / 2);
         if (x < VIEW_WIDTH + 20 && x + hazard.w > -20) {
           rects.push({
             ...hazard,
             x,
-            y: hazard.y + tunnelOffset + this.motionOffset(hazard),
+            y: hazard.y + tunnelOffset + motion.y,
             kind: hazard.kind,
             chapter: active.definition.chapter,
             decoration: active.definition.decoration,
+            active: hazard.cycle ? this.hazardIsActive(hazard) : undefined,
+            cycleProgress: hazard.cycle ? this.hazardCycleProgress(hazard) : undefined,
           });
         }
       }
@@ -286,7 +289,15 @@ export class GameModel {
       tunnel: this.tunnelBoundsAtWorldX(this.distance + this.playerX),
       transition: this.chapterTransition(),
       restartReady: this.mode === "dead" && this.deathTimer >= RESTART_DELAY_SECONDS,
-      hazards: visibleHazards.map(({ x, y, w, h, kind }) => ({ x: Math.round(x), y: Math.round(y), w, h, kind })),
+      hazards: visibleHazards.map(({ x, y, w, h, kind, active, cycleProgress }) => ({
+        x: Math.round(x),
+        y: Math.round(y),
+        w,
+        h,
+        kind,
+        ...(active === undefined ? {} : { active }),
+        ...(cycleProgress === undefined ? {} : { cycleProgress: Number(cycleProgress.toFixed(2)) }),
+      })),
       solids: visibleSolids.map(({ x, y, w, h, detail }) => ({ x: Math.round(x), y: Math.round(y), w, h, detail })),
       feathers: this.visibleFeathers().filter((item) => !item.collected).slice(0, 6).map((item) => ({ x: Math.round(item.x), y: item.y })),
     });
@@ -414,14 +425,15 @@ export class GameModel {
       const origin = active.startX - this.distance;
       for (const hazard of active.definition.hazards) {
         const tunnelOffset = tunnelOffsetAt(active.definition, hazard.x + hazard.w / 2);
-        const motionOffset = this.motionOffset(hazard);
+        const motion = this.motionOffset(hazard);
+        if (!this.hazardIsActive(hazard)) continue;
         const terrainSpike = hazard.kind === "thorns" || hazard.kind === "barbs";
         const collisionHeight = terrainSpike ? hazard.h * TERRAIN_SPIKE_MIN_SCALE : hazard.h;
         const ceilingSpike = hazard.attachment === "ceiling" || hazard.flipY === true;
         const collisionInsetY = terrainSpike && !ceilingSpike ? hazard.h - collisionHeight : 0;
         const rect = {
-          x: origin + hazard.x,
-          y: hazard.y + tunnelOffset + motionOffset + collisionInsetY,
+          x: origin + hazard.x + motion.x,
+          y: hazard.y + tunnelOffset + motion.y + collisionInsetY,
           w: hazard.w,
           h: collisionHeight,
         };
@@ -538,10 +550,21 @@ export class GameModel {
     return selected;
   }
 
-  private motionOffset(hazard: HazardSpec): number {
-    if (!hazard.motion) return 0;
+  private motionOffset(hazard: HazardSpec): { x: number; y: number } {
+    if (!hazard.motion) return { x: 0, y: 0 };
     const phase = hazard.motion.phase ?? 0;
-    return Math.sin((this.simTime * hazard.motion.frequency + phase) * Math.PI * 2) * hazard.motion.amplitude;
+    const offset = Math.sin((this.simTime * hazard.motion.frequency + phase) * Math.PI * 2) * hazard.motion.amplitude;
+    return hazard.motion.axis === "x" ? { x: offset, y: 0 } : { x: 0, y: offset };
+  }
+
+  private hazardCycleProgress(hazard: HazardSpec): number {
+    if (!hazard.cycle) return 0;
+    const phase = hazard.cycle.phase ?? 0;
+    return ((this.simTime / hazard.cycle.period + phase) % 1 + 1) % 1;
+  }
+
+  private hazardIsActive(hazard: HazardSpec): boolean {
+    return !hazard.cycle || this.hazardCycleProgress(hazard) < hazard.cycle.activeRatio;
   }
 
   private random(): number {

@@ -46,16 +46,27 @@ function startingStates(envelope: Envelope): SolverState[] {
   ];
 }
 
-function movingY(hazard: HazardSpec, time: number, phaseOffset: number, tunnelOffset: number): number {
-  if (!hazard.motion) return hazard.y + tunnelOffset;
+function motionOffset(hazard: HazardSpec, time: number, phaseOffset: number): { x: number; y: number } {
+  if (!hazard.motion) return { x: 0, y: 0 };
   const phase = (hazard.motion.phase ?? 0) + phaseOffset;
-  return hazard.y + tunnelOffset + Math.sin((time * hazard.motion.frequency + phase) * Math.PI * 2) * hazard.motion.amplitude;
+  const offset = Math.sin((time * hazard.motion.frequency + phase) * Math.PI * 2) * hazard.motion.amplitude;
+  return hazard.motion.axis === "x" ? { x: offset, y: 0 } : { x: 0, y: offset };
+}
+
+function hazardIsActive(hazard: HazardSpec, time: number, phaseOffset: number): boolean {
+  if (!hazard.cycle) return true;
+  const phase = (hazard.cycle.phase ?? 0) + phaseOffset;
+  const progress = ((time / hazard.cycle.period + phase) % 1 + 1) % 1;
+  return progress < hazard.cycle.activeRatio;
 }
 
 function collidesHazard(state: SolverState, progress: number, hazard: HazardSpec, time: number, phaseOffset: number, tunnelOffset: number): boolean {
-  const horizontal = progress + halfW > hazard.x && progress - halfW < hazard.x + hazard.w;
+  if (!hazardIsActive(hazard, time, phaseOffset)) return false;
+  const motion = motionOffset(hazard, time, phaseOffset);
+  const x = hazard.x + motion.x;
+  const horizontal = progress + halfW > x && progress - halfW < x + hazard.w;
   if (!horizontal) return false;
-  const y = movingY(hazard, time, phaseOffset, tunnelOffset);
+  const y = hazard.y + tunnelOffset + motion.y;
   return state.y + halfH > y && state.y - halfH < y + hazard.h;
 }
 

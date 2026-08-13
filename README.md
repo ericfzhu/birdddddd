@@ -67,6 +67,7 @@ No cross-origin API or CORS permission is required for the iframe. Best score, m
 - Nine continuous tile-world biomes: Verdant Wilds, Underground Jungle, Sunken Dunes, Marble Cave, Violet Chasm, Underground Corruption, Abandoned Minecart, Ashen Depths, and Underworld
 - Authored raster terrain, panorama, and prop atlases with optimized nearest-neighbour runtime copies; editable high-resolution sources live under `art/source`
 - Rising and falling tunnel profiles with persistent slope/pillar pushback and left-edge failure
+- Progressive biome challenges: swaying jungle vines, timed sand jets, marble crushers, crystal shards, corruption spores, rolling minecarts, ember wisps, and alternating Underworld flame vents
 - Compatibility metadata and discrete physics traversal checks for chunk transitions
 - Gate scoring, optional three-feather bonus chains, local best-score/settings persistence
 - Original authored raster environments, a code-drawn animated bird, and procedurally synthesized chiptune/SFX

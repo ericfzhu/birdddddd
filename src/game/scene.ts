@@ -794,6 +794,129 @@ export class AviaryScene extends Phaser.Scene {
       }
       return;
     }
+    if (rect.kind === "vine") {
+      const biome = BIOMES[rect.chapter] ?? BIOMES[0];
+      const centerX = rect.x + rect.w / 2;
+      g.lineStyle(3, biome.surface, 1);
+      let previousX = centerX;
+      let previousY = rect.y;
+      for (let y = rect.y + 6; y <= rect.y + rect.h; y += 6) {
+        const x = centerX + (Math.round((y - rect.y) / 6) % 2 === 0 ? -2 : 2);
+        g.lineBetween(previousX, previousY, x, y);
+        previousX = x;
+        previousY = y;
+      }
+      g.fillStyle(biome.danger, 1);
+      for (let y = rect.y + 10; y < rect.y + rect.h; y += 12) {
+        g.fillTriangle(centerX - 1, y, centerX - 6, y + 3, centerX, y + 5);
+        g.fillTriangle(centerX + 1, y + 5, centerX + 6, y + 8, centerX, y + 10);
+      }
+      g.fillStyle(biome.glow, 0.9);
+      g.fillCircle(centerX, rect.y + rect.h - 2, 3);
+      return;
+    }
+    if (rect.kind === "sandJet" || rect.kind === "flame") {
+      const biome = BIOMES[rect.chapter] ?? BIOMES[0];
+      const ceiling = rect.attachment === "ceiling" || rect.flipY === true;
+      const active = rect.active !== false;
+      const baseY = ceiling ? rect.y : rect.y + rect.h;
+      const direction = ceiling ? 1 : -1;
+      const nozzleY = baseY - (ceiling ? 0 : 5);
+      g.fillStyle(biome.terrainDark, 1);
+      g.fillRect(rect.x - 2, nozzleY, rect.w + 4, 5);
+      g.fillStyle(biome.surface, 1);
+      g.fillRect(rect.x, nozzleY + (ceiling ? 3 : 0), rect.w, 2);
+      if (!active) {
+        g.fillStyle(biome.glow, 0.45 + Math.sin(this.uiTime * 8) * 0.18);
+        for (let index = 0; index < 3; index += 1) {
+          const y = baseY + direction * (8 + index * 7);
+          g.fillRect(rect.x + 2 + index * 4, y, 2, 2);
+        }
+        return;
+      }
+      if (rect.kind === "sandJet") {
+        g.fillStyle(biome.glow, 0.9);
+        for (let distance = 5; distance < rect.h; distance += 5) {
+          const spread = Math.min(4, Math.floor(distance / 10));
+          const y = baseY + direction * distance;
+          g.fillRect(rect.x + rect.w / 2 - spread, y, spread * 2 + 2, 3);
+        }
+      } else {
+        const tipY = baseY + direction * rect.h;
+        g.fillStyle(biome.danger, 1);
+        g.fillTriangle(rect.x, baseY, rect.x + rect.w, baseY, rect.x + rect.w / 2, tipY);
+        g.fillStyle(biome.glow, 0.95);
+        g.fillTriangle(rect.x + 4, baseY, rect.x + rect.w - 3, baseY, rect.x + rect.w / 2, baseY + direction * rect.h * 0.7);
+      }
+      return;
+    }
+    if (rect.kind === "crusher") {
+      const biome = BIOMES[rect.chapter] ?? BIOMES[0];
+      g.fillStyle(biome.terrainDark, 1);
+      g.fillRect(rect.x + 2, rect.y + 2, rect.w, rect.h);
+      g.fillStyle(biome.terrain, 1);
+      g.fillRect(rect.x, rect.y, rect.w, rect.h);
+      g.lineStyle(2, biome.surface, 1);
+      g.strokeRect(rect.x + 1, rect.y + 1, rect.w - 2, rect.h - 2);
+      g.fillStyle(biome.accent, 0.85);
+      g.fillTriangle(rect.x + 3, rect.y + rect.h, rect.x + 7, rect.y + rect.h + 5, rect.x + 11, rect.y + rect.h);
+      g.fillTriangle(rect.x + 11, rect.y, rect.x + 15, rect.y - 5, rect.x + 19, rect.y);
+      g.fillStyle(biome.glow, 0.9);
+      g.fillRect(rect.x + rect.w / 2 - 2, rect.y + rect.h / 2 - 2, 4, 4);
+      return;
+    }
+    if (rect.kind === "crystal") {
+      const biome = BIOMES[rect.chapter] ?? BIOMES[0];
+      const cx = rect.x + rect.w / 2;
+      const cy = rect.y + rect.h / 2;
+      g.fillStyle(biome.danger, 1);
+      g.fillTriangle(cx, rect.y, rect.x + rect.w, cy, cx, rect.y + rect.h);
+      g.fillTriangle(cx, rect.y, rect.x, cy, cx, rect.y + rect.h);
+      g.fillStyle(biome.glow, 0.85);
+      g.fillTriangle(cx, rect.y + 3, cx + 4, cy, cx, cy + 2);
+      return;
+    }
+    if (rect.kind === "spore") {
+      const biome = BIOMES[rect.chapter] ?? BIOMES[0];
+      const cx = rect.x + rect.w / 2;
+      const cy = rect.y + rect.h / 2;
+      g.fillStyle(biome.danger, 0.32);
+      g.fillCircle(cx, cy, rect.w / 2 + 2);
+      g.fillStyle(biome.surface, 0.96);
+      g.fillCircle(cx - 3, cy, 5);
+      g.fillCircle(cx + 3, cy - 2, 4);
+      g.fillCircle(cx + 2, cy + 4, 3);
+      g.fillStyle(biome.glow, 0.95);
+      g.fillRect(cx - 4, cy - 2, 2, 2);
+      g.fillRect(cx + 2, cy - 4, 2, 2);
+      return;
+    }
+    if (rect.kind === "cart") {
+      const biome = BIOMES[rect.chapter] ?? BIOMES[0];
+      g.fillStyle(biome.terrainDark, 1);
+      g.fillRect(rect.x, rect.y + 4, rect.w, rect.h - 8);
+      g.fillStyle(biome.danger, 1);
+      g.fillTriangle(rect.x, rect.y + 3, rect.x + rect.w, rect.y + 3, rect.x + rect.w - 4, rect.y + rect.h - 6);
+      g.fillTriangle(rect.x, rect.y + 3, rect.x + 4, rect.y + rect.h - 6, rect.x + rect.w - 4, rect.y + rect.h - 6);
+      g.fillStyle(biome.glow, 0.8);
+      for (let x = rect.x + 7; x < rect.x + rect.w - 3; x += 9) g.fillRect(x, rect.y + 7, 3, 3);
+      g.fillStyle(biome.terrainDark, 1);
+      g.fillCircle(rect.x + 8, rect.y + rect.h - 2, 4);
+      g.fillCircle(rect.x + rect.w - 8, rect.y + rect.h - 2, 4);
+      return;
+    }
+    if (rect.kind === "ember") {
+      const biome = BIOMES[rect.chapter] ?? BIOMES[0];
+      const cx = rect.x + rect.w / 2;
+      const cy = rect.y + rect.h / 2;
+      g.fillStyle(biome.danger, 0.25);
+      g.fillCircle(cx, cy, rect.w / 2 + 3);
+      g.fillStyle(biome.danger, 1);
+      g.fillCircle(cx, cy, rect.w / 2 - 1);
+      g.fillStyle(biome.glow, 1);
+      g.fillTriangle(cx - 3, cy + 3, cx + 1, cy - 5, cx + 4, cy + 3);
+      return;
+    }
     if (rect.kind === "shutter") {
       const biome = BIOMES[rect.chapter] ?? BIOMES[0];
       g.fillStyle(biome.terrainDark, 1);
