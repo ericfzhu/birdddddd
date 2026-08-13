@@ -40,6 +40,9 @@ export class AviaryScene extends Phaser.Scene {
   model!: GameModel;
   private settings!: StoredSettings;
   private background!: Phaser.GameObjects.Graphics;
+  private terrainBase!: Phaser.GameObjects.Graphics;
+  private terrainTiles!: Phaser.GameObjects.Container;
+  private terrainTilePool: Phaser.GameObjects.Image[] = [];
   private world!: Phaser.GameObjects.Graphics;
   private effects!: Phaser.GameObjects.Graphics;
   private ui!: Phaser.GameObjects.Graphics;
@@ -66,6 +69,13 @@ export class AviaryScene extends Phaser.Scene {
     super("aviary");
   }
 
+  preload(): void {
+    this.load.spritesheet("biome-terrain-atlas", "/assets/biome-terrain-atlas-runtime.png", {
+      frameWidth: 16,
+      frameHeight: 16,
+    });
+  }
+
   create(): void {
     this.settings = this.loadSettings();
     const query = new URLSearchParams(window.location.search);
@@ -76,6 +86,13 @@ export class AviaryScene extends Phaser.Scene {
     this.model.reducedMotion = this.settings.reducedMotion;
 
     this.background = this.add.graphics();
+    this.terrainBase = this.add.graphics();
+    this.terrainTiles = this.add.container();
+    for (let index = 0; index < 640; index += 1) {
+      const tile = this.add.image(0, 0, "biome-terrain-atlas", 0).setOrigin(0, 0).setVisible(false);
+      this.terrainTiles.add(tile);
+      this.terrainTilePool.push(tile);
+    }
     this.world = this.add.graphics();
     this.effects = this.add.graphics();
     this.ui = this.add.graphics();
@@ -400,10 +417,14 @@ export class AviaryScene extends Phaser.Scene {
   }
 
   private renderWorld(): void {
+    const base = this.terrainBase;
     const g = this.world;
+    base.clear();
     g.clear();
     const shakeX = this.shake > 0 ? Math.sin(this.uiTime * 120) * 1.4 : 0;
     const shakeY = this.shake > 0 ? Math.cos(this.uiTime * 90) * 1.1 : 0;
+    base.setPosition(shakeX, shakeY + this.cameraOffsetY);
+    this.terrainTiles.setPosition(shakeX, shakeY + this.cameraOffsetY);
     g.setPosition(shakeX, shakeY + this.cameraOffsetY);
 
     const transition = this.model.chapterTransition();
@@ -411,9 +432,10 @@ export class AviaryScene extends Phaser.Scene {
     const to = transition?.to ?? from;
     const progress = transition?.progress ?? 0;
     const tunnel = this.model.visibleTunnelPoints();
-    this.drawChunkDecorations(g, tunnel);
-    this.drawTunnelFill(g, tunnel, from, 1 - progress);
-    if (to !== from) this.drawTunnelFill(g, tunnel, to, progress);
+    this.drawChunkDecorations(base, tunnel);
+    this.drawTunnelFill(base, tunnel, from, 1 - progress);
+    if (to !== from) this.drawTunnelFill(base, tunnel, to, progress);
+    this.renderTerrainTiles(tunnel, from, to, progress);
     this.drawTunnelRails(g, tunnel, from, 1 - progress);
     if (to !== from) this.drawTunnelRails(g, tunnel, to, progress);
     this.drawTransitionPassages(g);
@@ -435,7 +457,6 @@ export class AviaryScene extends Phaser.Scene {
     g.fillStyle(biome.terrain, alpha);
     g.fillPoints([new Phaser.Math.Vector2(first.x, -VIEW_HEIGHT * 2), ...ceiling, new Phaser.Math.Vector2(last.x, -VIEW_HEIGHT * 2)], true);
     g.fillPoints([new Phaser.Math.Vector2(first.x, VIEW_HEIGHT * 3), ...floor, new Phaser.Math.Vector2(last.x, VIEW_HEIGHT * 3)], true);
-    this.drawTerrainTiles(g, tunnel, chapter, alpha);
   }
 
   private tunnelPointAt(tunnel: VisibleTunnelPoint[], x: number): VisibleTunnelPoint | undefined {
@@ -444,39 +465,46 @@ export class AviaryScene extends Phaser.Scene {
     return tunnel[index];
   }
 
-  private drawTerrainTiles(g: Phaser.GameObjects.Graphics, tunnel: VisibleTunnelPoint[], chapter: number, alpha: number): void {
-    const biome = BIOMES[chapter] ?? BIOMES[0];
-    const tile = 8;
-    const drift = -((this.model.distance % tile + tile) % tile);
-    const seam = chapter === 0 ? 0x2d2119 : chapter === 1 ? 0x6d432c : chapter === 2 ? 0x24182f : 0x18151a;
-    const fleck = chapter === 0 ? 0x795037 : chapter === 1 ? 0xf0ca77 : chapter === 2 ? biome.accent : biome.accent;
-    for (let x = drift - tile; x < VIEW_WIDTH + tile; x += tile) {
-      const point = this.tunnelPointAt(tunnel, x + tile / 2);
+  private renderTerrainTiles(tunnel: VisibleTunnelPoint[], from: number, to: number, progress: number): void {
+    for (const tile of this.terrainTilePool) tile.setVisible(false);
+    const tileSize = 8;
+    const samplesPerAxis = 8;
+    const distanceColumn = Math.floor(this.model.distance / tileSize);
+    const drift = -((this.model.distance % tileSize + tileSize) % tileSize);
+    let poolIndex = 0;
+    for (let x = drift - tileSize; x < VIEW_WIDTH + tileSize; x += tileSize) {
+      const point = this.tunnelPointAt(tunnel, x + tileSize / 2);
       if (!point) continue;
-      for (let layer = 0; layer < 5; layer += 1) {
-        const topY = Math.floor(point.ceiling - 5 - layer * tile);
-        const bottomY = Math.floor(point.floor + 4 + layer * tile);
-        g.lineStyle(1, seam, 0.42 * alpha);
-        g.lineBetween(x, topY, x + tile - 1, topY);
-        g.lineBetween(x, bottomY, x + tile - 1, bottomY);
-        if ((Math.round(x / tile) + layer) % 2 === 0) {
-          g.fillStyle(fleck, 0.54 * alpha);
-          g.fillRect(x + 2 + (layer % 2) * 2, topY - 3, 2, 2);
-          g.fillRect(x + 4 - (layer % 2) * 2, bottomY + 3, 2, 2);
-        }
-      }
-      g.lineStyle(1, seam, 0.32 * alpha);
-      g.lineBetween(x, point.ceiling - 38, x, point.ceiling - 4);
-      g.lineBetween(x, point.floor + 4, x, point.floor + 38);
-      if (chapter === 2 && Math.round(x / tile) % 5 === 0) {
-        g.fillStyle(biome.glow, 0.75 * alpha);
-        g.fillTriangle(x + 1, point.ceiling - 10, x + 4, point.ceiling - 17, x + 6, point.ceiling - 10);
-        g.fillTriangle(x + 1, point.floor + 10, x + 4, point.floor + 17, x + 6, point.floor + 10);
-      }
-      if (chapter === 3 && Math.round(x / tile) % 6 === 0) {
-        g.fillStyle(biome.glow, 0.74 * alpha);
-        g.fillRect(x + 2, point.ceiling - 15, 3, 3);
-        g.fillRect(x + 4, point.floor + 12, 3, 3);
+      const worldColumn = distanceColumn + Math.round((x - drift) / tileSize);
+      for (let layer = 0; layer < 7; layer += 1) {
+        const mixHash = Math.abs((worldColumn * 37 + layer * 17) % 100) / 100;
+        const chapter = to !== from && mixHash < progress ? to : from;
+        const sourceHash = Math.abs(worldColumn * 73 + layer * 151 + chapter * 997);
+        const sourceColumn = sourceHash % samplesPerAxis;
+        const sourceRow = chapter === 0 && layer === 0 ? 0 : Math.floor(sourceHash / samplesPerAxis) % samplesPerAxis;
+        const atlasColumn = (chapter % 2) * samplesPerAxis + sourceColumn;
+        const atlasRow = Math.floor(chapter / 2) * samplesPerAxis + sourceRow;
+        const textureFrame = atlasRow * 16 + atlasColumn;
+        const tileX = Math.floor(x);
+        const topY = Math.floor(point.ceiling - (layer + 1) * tileSize);
+        const bottomY = Math.floor(point.floor + layer * tileSize);
+        const topTile = this.terrainTilePool[poolIndex++];
+        const bottomTile = this.terrainTilePool[poolIndex++];
+        if (!topTile || !bottomTile) return;
+        topTile
+          .setFrame(textureFrame)
+          .setCrop()
+          .setDisplaySize(tileSize + 0.25, tileSize + 0.25)
+          .setPosition(tileX, topY)
+          .setFlipY(true)
+          .setVisible(true);
+        bottomTile
+          .setFrame(textureFrame)
+          .setCrop()
+          .setDisplaySize(tileSize + 0.25, tileSize + 0.25)
+          .setPosition(tileX, bottomY)
+          .setFlipY(false)
+          .setVisible(true);
       }
     }
   }
