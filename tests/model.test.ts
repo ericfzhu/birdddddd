@@ -5,7 +5,7 @@ import { GameModel } from "../src/game/model";
 import { canTraverseChunk } from "../src/game/solver";
 import { CAMERA_DEAD_ZONE_BOTTOM, CAMERA_DEAD_ZONE_TOP, cameraTargetY, trackCameraY } from "../src/game/camera";
 import { spikeClusterLayout, TERRAIN_SPIKE_POINT_WIDTH } from "../src/game/hazards";
-import { propLayout } from "../src/game/props";
+import { PROP_ART, propLayout } from "../src/game/props";
 import type { ActiveChunk, ChunkDefinition } from "../src/game/types";
 
 const safeChunk = (feathers: Array<{ x: number; y: number }> = []): ChunkDefinition => ({
@@ -335,6 +335,14 @@ describe("birdddddd model", () => {
   });
 
   it("preserves prop aspect ratios and anchors measured visible bottoms", () => {
+    for (const [chapter, art] of PROP_ART.entries()) {
+      const layout = propLayout(chapter);
+      expect(layout.displayWidth / layout.displayHeight).toBeCloseTo(art.sourceWidth / art.sourceHeight, 5);
+      expect(layout.originY).toBeGreaterThan(0);
+      expect(layout.originY).toBeLessThanOrEqual(1);
+      expect(layout.visibleLeft).toBeLessThan(layout.visibleRight);
+    }
+
     const minecart = propLayout(6);
     expect(minecart.displayWidth).toBe(54);
     expect(minecart.displayHeight).toBeCloseTo(35.86, 2);
