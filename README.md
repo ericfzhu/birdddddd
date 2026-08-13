@@ -30,6 +30,30 @@ yarn build
 
 Open `http://localhost:5173`. Add `?seed=123` to reproduce a particular chunk sequence during testing.
 
+## Cloudflare deployment and embedding
+
+The production build is configured as a Cloudflare Worker with Static Assets. Deploy it with:
+
+```sh
+yarn deploy
+```
+
+`wrangler.jsonc` uploads `dist`, while `public/_headers` allows the game to be framed by `ericfzhu.com`, its `www` hostname, its Cloudflare Pages preview hostnames, and local development servers. Other websites cannot frame the deployed game.
+
+After assigning the Worker a public hostname, embed that single deployment in the main website:
+
+```tsx
+<iframe
+  src="https://your-game-hostname.example"
+  title="Impossible Aviary"
+  allow="fullscreen; autoplay"
+  allowFullScreen
+  className="h-full w-full border-0"
+/>
+```
+
+No cross-origin API or CORS permission is required for the iframe. Best score, mute, and reduced-motion preferences remain local to the game hostname.
+
 ## Design and architecture
 
 - Phaser 4.2 rendering, input, scaling, and a Phaser-owned Web Audio context
