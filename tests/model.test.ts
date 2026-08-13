@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { CHAPTERS, FIXED_STEP_SECONDS, FLIP_DEBOUNCE_SECONDS, PLAY_TOP, PLAYER_HEIGHT, PLAYER_X } from "../src/game/constants";
-import { CHUNKS, TRANSITION_CHUNKS, envelopesCompatible, validateChunkLibrary } from "../src/game/chunks";
+import { CHAPTERS, FIXED_STEP_SECONDS, FLIP_DEBOUNCE_SECONDS, PLAY_TOP, PLAYER_HEIGHT, PLAYER_MIN_X, PLAYER_X } from "../src/game/constants";
+import { CHUNKS, TRANSITION_CHUNKS, envelopesCompatible, tunnelOffsetAt, validateChunkLibrary } from "../src/game/chunks";
 import { GameModel } from "../src/game/model";
 import { canTraverseChunk } from "../src/game/solver";
 import { CAMERA_DEAD_ZONE_BOTTOM, CAMERA_DEAD_ZONE_TOP, cameraTargetY, trackCameraY } from "../src/game/camera";
@@ -100,6 +100,66 @@ describe("birdddddd model", () => {
     expect(hazards.some((hazard) => hazard.kind === "barbs" && hazard.attachment === "floor")).toBe(true);
     expect(hazards.some((hazard) => hazard.kind === "spinner" && !hazard.motion)).toBe(true);
     expect(hazards.some((hazard) => hazard.kind === "spinner" && hazard.motion)).toBe(true);
+  });
+
+  it("authors rising and falling tunnel sections that return to compatible flat entrances", () => {
+    const tunnelChunks = CHUNKS.filter((chunk) => chunk.tunnel);
+    expect(tunnelChunks.length).toBeGreaterThanOrEqual(8);
+    expect(tunnelChunks.some((chunk) => Math.min(...(chunk.tunnel?.map((point) => point.y) ?? [0])) < 0)).toBe(true);
+    expect(tunnelChunks.some((chunk) => Math.max(...(chunk.tunnel?.map((point) => point.y) ?? [0])) > 0)).toBe(true);
+    for (const chunk of tunnelChunks) {
+      expect(tunnelOffsetAt(chunk, 0)).toBe(0);
+      expect(tunnelOffsetAt(chunk, chunk.width)).toBe(0);
+    }
+  });
+
+  it("pushes a bird left against an uncleared slope, lets it recover when clear, and kills it at the screen edge", () => {
+    const risingTunnel: ChunkDefinition = {
+      ...safeChunk(),
+      id: "test-rising-tunnel",
+      tunnel: [
+        { x: 0, y: 0 },
+        { x: 70, y: 0 },
+        { x: 130, y: -44 },
+        { x: 200, y: 0 },
+      ],
+    };
+    const model = new GameModel(82);
+    model.chunks = [activate(risingTunnel, 20)];
+    model.mode = "playing";
+
+    model.advance(180);
+    expect(model.mode).toBe("playing");
+    expect(model.playerX).toBeLessThan(PLAYER_X - 5);
+
+    const fallingTunnel: ChunkDefinition = {
+      ...risingTunnel,
+      id: "test-falling-tunnel",
+      tunnel: risingTunnel.tunnel?.map((point) => ({ ...point, y: -point.y })),
+    };
+    const ceilingModel = new GameModel(84);
+    ceilingModel.chunks = [activate(fallingTunnel, 20)];
+    ceilingModel.mode = "playing";
+    ceilingModel.gravity = -1;
+    ceilingModel.playerY = PLAY_TOP + PLAYER_HEIGHT / 2;
+    ceilingModel.advance(180);
+    expect(ceilingModel.mode).toBe("playing");
+    expect(ceilingModel.playerX).toBeLessThan(PLAYER_X - 5);
+
+    const shovedX = model.playerX;
+    model.chunks = [activate(safeChunk())];
+    model.distance = 0;
+    model.playerY = 90;
+    model.velocityY = 0;
+    model.advance(180);
+    expect(model.playerX).toBeGreaterThan(shovedX);
+
+    const trapped = new GameModel(83);
+    trapped.chunks = [activate(risingTunnel, 20)];
+    trapped.mode = "playing";
+    trapped.advance(1400);
+    expect(trapped.mode, trapped.textSnapshot()).toBe("dead");
+    expect(trapped.playerX).toBeLessThanOrEqual(PLAYER_MIN_X + 0.5);
   });
 
   it("treats a floating spinner as lethal terrain", () => {

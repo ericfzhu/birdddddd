@@ -8,13 +8,15 @@ import {
   PLAY_BOTTOM,
   PLAY_TOP,
   PLAYER_HEIGHT,
+  PLAYER_MIN_X,
+  PLAYER_RECOVERY_SPEED,
   PLAYER_WIDTH,
   PLAYER_X,
   RESTART_DELAY_SECONDS,
   VIEW_WIDTH,
   chapterForGates,
 } from "./constants";
-import { chunksForChapter, envelopesCompatible, transitionChunk } from "./chunks";
+import { chunksForChapter, envelopesCompatible, transitionChunk, tunnelOffsetAt } from "./chunks";
 import type {
   ActiveChunk,
   ChapterTransitionState,
@@ -23,6 +25,7 @@ import type {
   HazardSpec,
   VisibleFeather,
   VisibleRect,
+  VisibleTunnelPoint,
 } from "./types";
 
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
@@ -33,6 +36,7 @@ function overlaps(a: { x: number; y: number; w: number; h: number }, b: { x: num
 
 export class GameModel {
   mode: GameMode = "ready";
+  playerX = PLAYER_X;
   playerY = PLAY_BOTTOM - PLAYER_HEIGHT / 2;
   velocityY = 0;
   gravity: -1 | 1 = 1;
@@ -65,6 +69,7 @@ export class GameModel {
 
   reset(nextSeed = (this.seed + 0x9e3779b9) >>> 0): void {
     this.mode = "ready";
+    this.playerX = PLAYER_X;
     this.playerY = PLAY_BOTTOM - PLAYER_HEIGHT / 2;
     this.velocityY = 0;
     this.gravity = 1;
@@ -118,8 +123,11 @@ export class GameModel {
     }
 
     this.simTime += dt;
+    const previousX = this.playerX;
     const previousY = this.playerY;
+    const previousDistance = this.distance;
     const speed = CHAPTERS[this.chapter]?.speed ?? CHAPTERS[0].speed;
+    this.playerX = Math.min(PLAYER_X, this.playerX + PLAYER_RECOVERY_SPEED * dt);
     this.distance += speed * dt;
     this.velocityY = clamp(
       this.velocityY + this.gravity * GRAVITY_ACCELERATION * dt,
@@ -128,7 +136,8 @@ export class GameModel {
     );
     this.playerY += this.velocityY * dt;
 
-    this.resolveWorldBounds();
+    this.resolveTunnel(previousX, previousY, previousDistance);
+    if (this.mode !== "playing") return;
     this.resolveSolids(previousY);
     this.processHazards();
     if (this.mode !== "playing") return;
@@ -154,10 +163,12 @@ export class GameModel {
       const origin = active.startX - this.distance;
       for (const solid of active.definition.solids) {
         const x = origin + solid.x;
+        const y = solid.y + tunnelOffsetAt(active.definition, solid.x + solid.w / 2);
         if (x < VIEW_WIDTH + 20 && x + solid.w > -20) {
           rects.push({
             ...solid,
             x,
+            y,
             kind: "solid",
             detail: solid.detail,
             chapter: active.definition.chapter,
@@ -167,11 +178,12 @@ export class GameModel {
       }
       for (const hazard of active.definition.hazards) {
         const x = origin + hazard.x;
+        const tunnelOffset = tunnelOffsetAt(active.definition, hazard.x + hazard.w / 2);
         if (x < VIEW_WIDTH + 20 && x + hazard.w > -20) {
           rects.push({
             ...hazard,
             x,
-            y: hazard.y + this.motionOffset(hazard),
+            y: hazard.y + tunnelOffset + this.motionOffset(hazard),
             kind: hazard.kind,
             chapter: active.definition.chapter,
             decoration: active.definition.decoration,
@@ -189,25 +201,41 @@ export class GameModel {
       for (const feather of active.feathers) {
         const x = origin + feather.x;
         if (!feather.collected && x > -12 && x < VIEW_WIDTH + 12) {
-          feathers.push({ x, y: feather.y, collected: false });
+          feathers.push({ x, y: feather.y + tunnelOffsetAt(active.definition, feather.x), collected: false });
         }
       }
     }
     return feathers;
   }
 
+  visibleTunnelPoints(step = 4): VisibleTunnelPoint[] {
+    const points: VisibleTunnelPoint[] = [];
+    for (let x = -step; x <= VIEW_WIDTH + step; x += step) {
+      const offset = this.terrainOffsetAtWorldX(this.distance + x);
+      points.push({ x, ceiling: PLAY_TOP + offset, floor: PLAY_BOTTOM + offset });
+    }
+    return points;
+  }
+
+  terrainOffsetAtWorldX(worldX: number): number {
+    const active = this.chunks.find((chunk) => worldX >= chunk.startX && worldX <= chunk.startX + chunk.definition.width);
+    return active ? tunnelOffsetAt(active.definition, worldX - active.startX) : 0;
+  }
+
   isGrounded(): boolean {
     if (Math.abs(this.velocityY) > 0.01) return false;
     const solidHalfWidth = PLAYER_WIDTH / 2 - HITBOX_INSET;
     const solidHalfHeight = PLAYER_HEIGHT / 2 - HITBOX_INSET;
-    if (this.gravity === 1 && Math.abs(this.playerY - (PLAY_BOTTOM - PLAYER_HEIGHT / 2)) < 0.1) return true;
-    if (this.gravity === -1 && Math.abs(this.playerY - (PLAY_TOP + PLAYER_HEIGHT / 2)) < 0.1) return true;
+    const tunnel = this.tunnelBoundsAtWorldX(this.distance + this.playerX);
+    if (this.gravity === 1 && Math.abs(this.playerY - (tunnel.floor - PLAYER_HEIGHT / 2)) < 0.85) return true;
+    if (this.gravity === -1 && Math.abs(this.playerY - (tunnel.ceiling + PLAYER_HEIGHT / 2)) < 0.85) return true;
     for (const active of this.chunks) {
       const origin = active.startX - this.distance;
       for (const solid of active.definition.solids) {
         const left = origin + solid.x;
-        if (PLAYER_X + solidHalfWidth <= left || PLAYER_X - solidHalfWidth >= left + solid.w) continue;
-        const surfaceY = this.gravity === 1 ? solid.y - solidHalfHeight : solid.y + solid.h + solidHalfHeight;
+        if (this.playerX + solidHalfWidth <= left || this.playerX - solidHalfWidth >= left + solid.w) continue;
+        const solidY = solid.y + tunnelOffsetAt(active.definition, solid.x + solid.w / 2);
+        const surfaceY = this.gravity === 1 ? solidY - solidHalfHeight : solidY + solid.h + solidHalfHeight;
         if (Math.abs(this.playerY - surfaceY) < 0.1) return true;
       }
     }
@@ -224,7 +252,7 @@ export class GameModel {
     const active = this.chunks.find((chunk) => chunk.definition.transition);
     const transition = active?.definition.transition;
     if (!active || !transition) return undefined;
-    const localX = this.distance + PLAYER_X - active.startX;
+    const localX = this.distance + this.playerX - active.startX;
     return {
       id: active.definition.id,
       from: transition.from,
@@ -239,7 +267,13 @@ export class GameModel {
     return JSON.stringify({
       coordinateSystem: "origin top-left; x increases right; y increases down; logical viewport 320x180",
       mode: this.mode,
-      player: { x: PLAYER_X, y: Number(this.playerY.toFixed(2)), vy: Number(this.velocityY.toFixed(2)), gravity: this.gravity },
+      player: {
+        x: Number(this.playerX.toFixed(2)),
+        y: Number(this.playerY.toFixed(2)),
+        vy: Number(this.velocityY.toFixed(2)),
+        gravity: this.gravity,
+        pushback: Number((PLAYER_X - this.playerX).toFixed(2)),
+      },
       animation: this.animationState(),
       score: this.score,
       gates: this.gates,
@@ -247,6 +281,7 @@ export class GameModel {
       featherChain: this.featherChain,
       chapter: CHAPTERS[this.chapter]?.name,
       speed: CHAPTERS[this.chapter]?.speed,
+      tunnel: this.tunnelBoundsAtWorldX(this.distance + this.playerX),
       transition: this.chapterTransition(),
       restartReady: this.mode === "dead" && this.deathTimer >= RESTART_DELAY_SECONDS,
       hazards: visibleHazards.map(({ x, y, w, h, kind }) => ({ x: Math.round(x), y: Math.round(y), w, h, kind })),
@@ -254,20 +289,69 @@ export class GameModel {
     });
   }
 
-  private resolveWorldBounds(): void {
+  private resolveTunnel(previousX: number, previousY: number, previousDistance: number): void {
     const halfHeight = PLAYER_HEIGHT / 2;
-    if (this.playerY + halfHeight >= PLAY_BOTTOM) {
-      const landed = this.velocityY > 35;
-      this.playerY = PLAY_BOTTOM - halfHeight;
-      if (this.velocityY > 0) this.velocityY = 0;
-      if (landed) this.events.push({ type: "land" });
+    const previousBounds = this.tunnelBoundsAtWorldX(previousDistance + previousX);
+    const bounds = this.tunnelBoundsAtWorldX(this.distance + this.playerX);
+    const previousTop = previousY - halfHeight;
+    const previousBottom = previousY + halfHeight;
+    const currentTop = this.playerY - halfHeight;
+    const currentBottom = this.playerY + halfHeight;
+    let pushed = false;
+
+    if (currentBottom >= bounds.floor) {
+      const birdFall = Math.max(0, currentBottom - previousBottom);
+      const floorRise = Math.max(0, previousBounds.floor - bounds.floor);
+      if (this.velocityY > 0 && birdFall + 0.01 >= floorRise) {
+        const landed = this.velocityY > 35;
+        this.playerY = bounds.floor - halfHeight;
+        this.velocityY = 0;
+        if (landed) this.events.push({ type: "land" });
+      } else {
+        pushed = true;
+      }
     }
-    if (this.playerY - halfHeight <= PLAY_TOP) {
-      const landed = this.velocityY < -35;
-      this.playerY = PLAY_TOP + halfHeight;
-      if (this.velocityY < 0) this.velocityY = 0;
-      if (landed) this.events.push({ type: "land" });
+
+    if (!pushed && currentTop <= bounds.ceiling) {
+      const birdRise = Math.max(0, previousTop - currentTop);
+      const ceilingDrop = Math.max(0, bounds.ceiling - previousBounds.ceiling);
+      if (this.velocityY < 0 && birdRise + 0.01 >= ceilingDrop) {
+        const landed = this.velocityY < -35;
+        this.playerY = bounds.ceiling + halfHeight;
+        this.velocityY = 0;
+        if (landed) this.events.push({ type: "land" });
+      } else {
+        pushed = true;
+      }
     }
+
+    if (pushed) this.pushBackToClearance(previousY);
+  }
+
+  private pushBackToClearance(previousY: number): void {
+    const halfHeight = PLAYER_HEIGHT / 2;
+    for (let candidate = this.playerX - 0.5; candidate >= PLAYER_MIN_X; candidate -= 0.5) {
+      const bounds = this.tunnelBoundsAtWorldX(this.distance + candidate);
+      const clear = this.playerY - halfHeight >= bounds.ceiling - 0.75 && this.playerY + halfHeight <= bounds.floor + 0.75;
+      if (!clear) continue;
+      this.playerX = candidate;
+      if (this.playerY + halfHeight > bounds.floor) {
+        this.playerY = Math.min(this.playerY, previousY);
+        if (this.velocityY > 0) this.velocityY = 0;
+      } else if (this.playerY - halfHeight < bounds.ceiling) {
+        this.playerY = Math.max(this.playerY, previousY);
+        if (this.velocityY < 0) this.velocityY = 0;
+      }
+      if (this.playerX <= PLAYER_MIN_X + 0.5) this.die();
+      return;
+    }
+    this.playerX = PLAYER_MIN_X;
+    this.die();
+  }
+
+  private tunnelBoundsAtWorldX(worldX: number): { ceiling: number; floor: number; offset: number } {
+    const offset = this.terrainOffsetAtWorldX(worldX);
+    return { ceiling: PLAY_TOP + offset, floor: PLAY_BOTTOM + offset, offset: Number(offset.toFixed(2)) };
   }
 
   private resolveSolids(previousY: number): void {
@@ -277,18 +361,19 @@ export class GameModel {
       const origin = active.startX - this.distance;
       for (const solid of active.definition.solids) {
         const left = origin + solid.x;
-        if (PLAYER_X + halfWidth <= left || PLAYER_X - halfWidth >= left + solid.w) continue;
+        if (this.playerX + halfWidth <= left || this.playerX - halfWidth >= left + solid.w) continue;
+        const solidY = solid.y + tunnelOffsetAt(active.definition, solid.x + solid.w / 2);
         if (this.gravity === 1) {
           const previousBottom = previousY + halfHeight;
           const currentBottom = this.playerY + halfHeight;
-          if (previousBottom <= solid.y && currentBottom >= solid.y && this.velocityY >= 0) {
-            this.playerY = solid.y - halfHeight;
+          if (previousBottom <= solidY && currentBottom >= solidY && this.velocityY >= 0) {
+            this.playerY = solidY - halfHeight;
             const landed = this.velocityY > 35;
             this.velocityY = 0;
             if (landed) this.events.push({ type: "land" });
           }
         } else {
-          const underside = solid.y + solid.h;
+          const underside = solidY + solid.h;
           const previousTop = previousY - halfHeight;
           const currentTop = this.playerY - halfHeight;
           if (previousTop >= underside && currentTop <= underside && this.velocityY <= 0) {
@@ -304,7 +389,7 @@ export class GameModel {
 
   private processHazards(): void {
     const playerRect = {
-      x: PLAYER_X - PLAYER_WIDTH / 2 + HITBOX_INSET,
+      x: this.playerX - PLAYER_WIDTH / 2 + HITBOX_INSET,
       y: this.playerY - PLAYER_HEIGHT / 2 + HITBOX_INSET,
       w: PLAYER_WIDTH - HITBOX_INSET * 2,
       h: PLAYER_HEIGHT - HITBOX_INSET * 2,
@@ -312,7 +397,8 @@ export class GameModel {
     for (const active of this.chunks) {
       const origin = active.startX - this.distance;
       for (const hazard of active.definition.hazards) {
-        const rect = { x: origin + hazard.x, y: hazard.y + this.motionOffset(hazard), w: hazard.w, h: hazard.h };
+        const tunnelOffset = tunnelOffsetAt(active.definition, hazard.x + hazard.w / 2);
+        const rect = { x: origin + hazard.x, y: hazard.y + tunnelOffset + this.motionOffset(hazard), w: hazard.w, h: hazard.h };
         if (overlaps(playerRect, rect)) {
           this.die();
           return;
@@ -323,7 +409,7 @@ export class GameModel {
 
   private processFeathers(): void {
     const playerRect = {
-      x: PLAYER_X - PLAYER_WIDTH / 2,
+      x: this.playerX - PLAYER_WIDTH / 2,
       y: this.playerY - PLAYER_HEIGHT / 2,
       w: PLAYER_WIDTH,
       h: PLAYER_HEIGHT,
@@ -332,7 +418,8 @@ export class GameModel {
       const origin = active.startX - this.distance;
       for (const feather of active.feathers) {
         if (feather.collected || feather.missed) continue;
-        const featherRect = { x: origin + feather.x - 4, y: feather.y - 5, w: 8, h: 10 };
+        const featherY = feather.y + tunnelOffsetAt(active.definition, feather.x);
+        const featherRect = { x: origin + feather.x - 4, y: featherY - 5, w: 8, h: 10 };
         if (overlaps(playerRect, featherRect)) {
           feather.collected = true;
           this.featherChain += 1;
@@ -342,7 +429,7 @@ export class GameModel {
             this.score += 1;
             this.events.push({ type: "bonus" });
           }
-        } else if (origin + feather.x < PLAYER_X - PLAYER_WIDTH) {
+        } else if (origin + feather.x < this.playerX - PLAYER_WIDTH) {
           feather.missed = true;
           this.featherChain = 0;
         }
@@ -353,7 +440,7 @@ export class GameModel {
   private processGates(): void {
     for (const active of this.chunks) {
       const gateX = active.startX + active.definition.width - 12 - this.distance;
-      if (!active.gatePassed && gateX <= PLAYER_X) {
+      if (!active.gatePassed && gateX <= this.playerX) {
         active.gatePassed = true;
         if (active.definition.transition) continue;
         this.gates += 1;

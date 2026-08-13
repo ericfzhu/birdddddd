@@ -37,6 +37,11 @@ export interface FeatherSpec {
   y: number;
 }
 
+export interface TunnelPoint {
+  x: number;
+  y: number;
+}
+
 export interface ChunkDefinition {
   id: string;
   chapter: number;
@@ -46,6 +51,7 @@ export interface ChunkDefinition {
   solids: SolidSpec[];
   hazards: HazardSpec[];
   feathers: FeatherSpec[];
+  tunnel?: TunnelPoint[];
   decoration: "nest" | "gears" | "bells" | "eggs" | "passage";
   transition?: {
     from: number;
@@ -97,4 +103,10 @@ export interface VisibleFeather {
   x: number;
   y: number;
   collected: boolean;
+}
+
+export interface VisibleTunnelPoint {
+  x: number;
+  ceiling: number;
+  floor: number;
 }

@@ -14,7 +14,8 @@ import {
   VIEW_WIDTH,
 } from "./constants";
 import { GameModel } from "./model";
-import type { GameEvent, VisibleRect } from "./types";
+import { HudText } from "./hud";
+import type { GameEvent, VisibleRect, VisibleTunnelPoint } from "./types";
 
 interface FeatherParticle {
   x: number;
@@ -33,17 +34,6 @@ interface StoredSettings {
 
 const STORAGE_KEY = "birdddddd:v1";
 const LEGACY_STORAGE_KEY = "impossible-aviary:v1";
-const TEXT_RENDER_RESOLUTION = 4;
-const textStyle = (size: number, color = "#f6e7c1"): Phaser.Types.GameObjects.Text.TextStyle => ({
-  fontFamily: 'ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, monospace',
-  fontSize: `${size}px`,
-  fontStyle: size >= 12 ? "700" : "600",
-  color,
-  align: "center",
-  stroke: "#17182b",
-  strokeThickness: size >= 12 ? 1 : 0,
-  resolution: TEXT_RENDER_RESOLUTION,
-});
 
 export class AviaryScene extends Phaser.Scene {
   model!: GameModel;
@@ -52,12 +42,12 @@ export class AviaryScene extends Phaser.Scene {
   private world!: Phaser.GameObjects.Graphics;
   private effects!: Phaser.GameObjects.Graphics;
   private ui!: Phaser.GameObjects.Graphics;
-  private titleText!: Phaser.GameObjects.Text;
-  private promptText!: Phaser.GameObjects.Text;
-  private scoreText!: Phaser.GameObjects.Text;
-  private chapterText!: Phaser.GameObjects.Text;
-  private resultText!: Phaser.GameObjects.Text;
-  private helperText!: Phaser.GameObjects.Text;
+  private titleText!: HudText;
+  private promptText!: HudText;
+  private scoreText!: HudText;
+  private chapterText!: HudText;
+  private resultText!: HudText;
+  private helperText!: HudText;
   private audio!: AudioDirector;
   private accumulator = 0;
   private cameraOffsetY = 0;
@@ -89,12 +79,12 @@ export class AviaryScene extends Phaser.Scene {
     this.effects = this.add.graphics();
     this.ui = this.add.graphics();
 
-    this.titleText = this.add.text(VIEW_WIDTH / 2, 64, "BIRDDDDDD", textStyle(18, "#fff9e9")).setOrigin(0.5);
-    this.promptText = this.add.text(VIEW_WIDTH / 2, 123, "TAP TO TURN GRAVITY", textStyle(9)).setOrigin(0.5);
-    this.scoreText = this.add.text(VIEW_WIDTH / 2, 18, "0", textStyle(15, "#fff9e9")).setOrigin(0.5, 0);
-    this.chapterText = this.add.text(VIEW_WIDTH / 2, 49, "NURSERY WORKS", textStyle(8, "#f2b544")).setOrigin(0.5);
-    this.resultText = this.add.text(VIEW_WIDTH / 2, 73, "", textStyle(16, "#fff9e9")).setOrigin(0.5);
-    this.helperText = this.add.text(VIEW_WIDTH / 2, 124, "", textStyle(8)).setOrigin(0.5);
+    this.titleText = new HudText("hud-title", 64);
+    this.promptText = new HudText("hud-prompt", 123);
+    this.scoreText = new HudText("hud-score", 18);
+    this.chapterText = new HudText("hud-chapter", 49);
+    this.resultText = new HudText("hud-result", 73);
+    this.helperText = new HudText("hud-helper", 124);
 
     this.audio = new AudioDirector(this, this.settings.muted);
     this.bindInput();
@@ -204,7 +194,7 @@ export class AviaryScene extends Phaser.Scene {
       switch (event.type) {
         case "flip":
           this.pulse = this.settings.reducedMotion ? 0.04 : 0.13;
-          this.spawnFeathers(PLAYER_X - 5, this.model.playerY, 2, COLORS.cream);
+          this.spawnFeathers(this.model.playerX - 5, this.model.playerY, 2, COLORS.cream);
           this.audio.flip(event.gravity);
           break;
         case "land":
@@ -212,7 +202,7 @@ export class AviaryScene extends Phaser.Scene {
           this.audio.land();
           break;
         case "feather":
-          this.spawnFeathers(PLAYER_X, this.model.playerY, 5, COLORS.yolk);
+          this.spawnFeathers(this.model.playerX, this.model.playerY, 5, COLORS.yolk);
           this.audio.feather(event.chain);
           break;
         case "bonus":
@@ -226,7 +216,7 @@ export class AviaryScene extends Phaser.Scene {
           break;
         case "death":
           this.shake = this.settings.reducedMotion ? 0 : 0.16;
-          this.spawnFeathers(PLAYER_X, this.model.playerY, 18, COLORS.yolk);
+          this.spawnFeathers(this.model.playerX, this.model.playerY, 18, COLORS.yolk);
           this.audio.death();
           this.settings.bestScore = Math.max(this.settings.bestScore, event.score);
           this.saveSettings();
@@ -392,18 +382,15 @@ export class AviaryScene extends Phaser.Scene {
     const shakeY = this.shake > 0 ? Math.cos(this.uiTime * 90) * 1.1 : 0;
     g.setPosition(shakeX, shakeY + this.cameraOffsetY);
 
-    g.fillStyle(COLORS.ink, 0.94);
-    g.fillRect(0, -VIEW_HEIGHT, VIEW_WIDTH, VIEW_HEIGHT + PLAY_TOP);
-    g.fillRect(0, PLAY_BOTTOM, VIEW_WIDTH, VIEW_HEIGHT * 2);
-
     const transition = this.model.chapterTransition();
     const from = transition?.from ?? this.model.chapter;
     const to = transition?.to ?? from;
     const progress = transition?.progress ?? 0;
-    this.drawBoundaryRails(g, from, 1 - progress);
-    if (to !== from) this.drawBoundaryRails(g, to, progress);
-
     this.drawChunkDecorations(g);
+    const tunnel = this.model.visibleTunnelPoints();
+    this.drawTunnelFill(g, tunnel);
+    this.drawTunnelRails(g, tunnel, from, 1 - progress);
+    if (to !== from) this.drawTunnelRails(g, tunnel, to, progress);
     this.drawTransitionPassages(g);
     this.drawChunkGates(g);
     for (const rect of this.model.visibleRects()) this.drawRectEntity(g, rect);
@@ -413,13 +400,60 @@ export class AviaryScene extends Phaser.Scene {
     if (this.model.animationState() !== "gone") this.drawBird(g);
   }
 
+  private drawTunnelFill(g: Phaser.GameObjects.Graphics, tunnel: VisibleTunnelPoint[]): void {
+    const first = tunnel[0];
+    const last = tunnel.at(-1);
+    if (!first || !last) return;
+    const ceiling = tunnel.map((point) => new Phaser.Math.Vector2(point.x, point.ceiling));
+    const floor = tunnel.map((point) => new Phaser.Math.Vector2(point.x, point.floor));
+    g.fillStyle(COLORS.ink, 0.96);
+    g.fillPoints([new Phaser.Math.Vector2(first.x, -VIEW_HEIGHT * 2), ...ceiling, new Phaser.Math.Vector2(last.x, -VIEW_HEIGHT * 2)], true);
+    g.fillPoints([new Phaser.Math.Vector2(first.x, VIEW_HEIGHT * 3), ...floor, new Phaser.Math.Vector2(last.x, VIEW_HEIGHT * 3)], true);
+  }
+
+  private drawTunnelRails(g: Phaser.GameObjects.Graphics, tunnel: VisibleTunnelPoint[], chapter: number, alpha: number): void {
+    if (alpha <= 0 || tunnel.length < 2) return;
+    const styles = [
+      { primary: COLORS.cream, secondary: COLORS.teal, fastener: COLORS.yolk, thickness: 3, spacing: 24 },
+      { primary: COLORS.teal, secondary: COLORS.cream, fastener: COLORS.yolk, thickness: 4, spacing: 18 },
+      { primary: COLORS.shadow, secondary: COLORS.cream, fastener: COLORS.teal, thickness: 5, spacing: 20 },
+      { primary: COLORS.teal, secondary: COLORS.cream, fastener: COLORS.yolk, thickness: 3, spacing: 28 },
+    ] as const;
+    const style = styles[chapter] ?? styles[0];
+    g.lineStyle(style.thickness, style.primary, alpha);
+    for (let index = 1; index < tunnel.length; index += 1) {
+      const previous = tunnel[index - 1];
+      const point = tunnel[index];
+      if (!previous || !point) continue;
+      g.lineBetween(previous.x, previous.ceiling, point.x, point.ceiling);
+      g.lineBetween(previous.x, previous.floor, point.x, point.floor);
+    }
+    g.lineStyle(1, style.secondary, 0.9 * alpha);
+    for (let index = 1; index < tunnel.length; index += 1) {
+      const previous = tunnel[index - 1];
+      const point = tunnel[index];
+      if (!previous || !point) continue;
+      g.lineBetween(previous.x, previous.ceiling + 2, point.x, point.ceiling + 2);
+      g.lineBetween(previous.x, previous.floor - 2, point.x, point.floor - 2);
+    }
+    const drift = -((this.model.distance * 0.65) % style.spacing);
+    for (let x = drift; x < VIEW_WIDTH + style.spacing; x += style.spacing) {
+      const point = tunnel[Math.max(0, Math.min(tunnel.length - 1, Math.round((x + 4) / 4)))];
+      if (!point) continue;
+      g.fillStyle(style.fastener, 0.9 * alpha);
+      g.fillRect(x, point.ceiling - 2, 3, 3);
+      g.fillRect(x + Math.floor(style.spacing / 2), point.floor, 3, 3);
+    }
+  }
+
   private drawChunkDecorations(g: Phaser.GameObjects.Graphics): void {
     for (const chunk of this.model.chunks) {
       if (chunk.definition.transition) continue;
       const origin = chunk.startX - this.model.distance;
       const idValue = [...chunk.definition.id].reduce((total, character) => total + character.charCodeAt(0), 0);
-      const x = origin + 72 + (idValue % 38);
-      const y = 48 + (idValue % 3) * 34;
+      const localX = 72 + (idValue % 38);
+      const x = origin + localX;
+      const y = 48 + (idValue % 3) * 34 + this.model.terrainOffsetAtWorldX(chunk.startX + localX);
       if (x < -36 || x > VIEW_WIDTH + 36) continue;
       switch (chunk.definition.decoration) {
         case "nest":
@@ -534,69 +568,6 @@ export class AviaryScene extends Phaser.Scene {
     g.fillRect(x - 6, y - 7, 2, 2);
     g.fillRect(x + 5, y - 8, 2, 2);
     g.fillRect(x, y + 2, 2, 2);
-  }
-
-  private drawBoundaryRails(g: Phaser.GameObjects.Graphics, chapter: number, alpha: number): void {
-    if (alpha <= 0) return;
-    const drift = -((this.model.distance * 0.65) % 24);
-    if (chapter === 0) {
-      g.fillStyle(COLORS.cream, alpha);
-      g.fillRect(0, PLAY_TOP - 3, VIEW_WIDTH, 3);
-      g.fillRect(0, PLAY_BOTTOM, VIEW_WIDTH, 3);
-      for (let x = drift; x < VIEW_WIDTH + 24; x += 24) {
-        g.fillStyle(COLORS.yolk, 0.7 * alpha);
-        g.fillRect(x + 6, PLAY_TOP - 3, 3, 3);
-        g.fillRect(x + 15, PLAY_BOTTOM, 3, 3);
-        g.fillStyle(COLORS.teal, 0.7 * alpha);
-        g.fillRect(x + 9, PLAY_TOP, 7, 2);
-        g.fillRect(x, PLAY_BOTTOM - 2, 7, 2);
-      }
-      return;
-    }
-    if (chapter === 1) {
-      g.fillStyle(COLORS.teal, alpha);
-      g.fillRect(0, PLAY_TOP - 4, VIEW_WIDTH, 4);
-      g.fillRect(0, PLAY_BOTTOM, VIEW_WIDTH, 4);
-      for (let x = drift; x < VIEW_WIDTH + 24; x += 16) {
-        g.fillStyle(COLORS.cream, 0.9 * alpha);
-        g.fillRect(x, PLAY_TOP, 8, 2);
-        g.fillRect(x + 8, PLAY_BOTTOM - 2, 8, 2);
-        g.fillStyle(COLORS.yolk, 0.85 * alpha);
-        g.fillRect(x + 5, PLAY_TOP - 3, 2, 2);
-        g.fillRect(x + 13, PLAY_BOTTOM + 1, 2, 2);
-      }
-      return;
-    }
-    if (chapter === 2) {
-      g.fillStyle(COLORS.shadow, 0.9 * alpha);
-      g.fillRect(0, PLAY_TOP - 5, VIEW_WIDTH, 5);
-      g.fillRect(0, PLAY_BOTTOM, VIEW_WIDTH, 5);
-      for (let x = drift; x < VIEW_WIDTH + 24; x += 18) {
-        const offset = (Math.floor((x - drift) / 18) & 1) * 2;
-        g.fillStyle(COLORS.cream, alpha);
-        g.fillRect(x, PLAY_TOP - 3 + offset, 11, 3);
-        g.fillRect(x + 7, PLAY_BOTTOM - offset, 11, 3);
-        g.fillStyle(COLORS.teal, 0.8 * alpha);
-        g.fillRect(x + 11, PLAY_TOP - 2 + offset, 7, 2);
-        g.fillRect(x, PLAY_BOTTOM + 1 - offset, 7, 2);
-      }
-      return;
-    }
-
-    g.fillStyle(COLORS.teal, 0.8 * alpha);
-    g.fillRect(0, PLAY_TOP - 3, VIEW_WIDTH, 2);
-    g.fillRect(0, PLAY_BOTTOM + 1, VIEW_WIDTH, 2);
-    g.fillStyle(COLORS.cream, 0.75 * alpha);
-    g.fillRect(0, PLAY_TOP - 1, VIEW_WIDTH, 1);
-    g.fillRect(0, PLAY_BOTTOM, VIEW_WIDTH, 1);
-    for (let x = drift; x < VIEW_WIDTH + 24; x += 32) {
-      g.fillStyle(COLORS.yolk, alpha);
-      g.fillRect(x + 4, PLAY_TOP - 4, 3, 3);
-      g.fillRect(x + 20, PLAY_BOTTOM + 1, 3, 3);
-      g.lineStyle(1, COLORS.teal, 0.5 * alpha);
-      g.lineBetween(x + 7, PLAY_TOP - 3, x + 20, PLAY_TOP - 3);
-      g.lineBetween(x + 7, PLAY_BOTTOM + 3, x + 20, PLAY_BOTTOM + 3);
-    }
   }
 
   private drawTransitionPassages(g: Phaser.GameObjects.Graphics): void {
@@ -790,7 +761,7 @@ export class AviaryScene extends Phaser.Scene {
     const flutter = animation === "flutter" ? Math.sin(motionTime * 20) : 0;
     const runBob = running && runFrame === 1 ? -gravity : 0;
     const stunJitter = stunned && !this.settings.reducedMotion ? Math.round(Math.sin(this.model.deathTimer * 85)) : 0;
-    const x = PLAYER_X + stunJitter;
+    const x = this.model.playerX + stunJitter;
     const y = this.model.playerY + runBob;
     const squash = stunned ? 3 : this.landingSquash > 0 ? 2 : 0;
     const bodyHeight = PLAYER_HEIGHT - squash;

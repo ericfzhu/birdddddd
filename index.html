@@ -10,7 +10,16 @@
   <body>
     <main class="page-shell" id="game-content">
       <section class="game-shell" aria-label="birdddddd game">
-        <div id="game" aria-label="Game canvas"></div>
+        <div id="game" aria-label="Game canvas">
+          <div class="game-hud" aria-hidden="true">
+            <div class="hud-text hud-title" id="hud-title">BIRDDDDDD</div>
+            <div class="hud-text hud-prompt" id="hud-prompt">TAP TO TURN GRAVITY</div>
+            <div class="hud-text hud-score hud-top" id="hud-score">0</div>
+            <div class="hud-text hud-chapter" id="hud-chapter">NURSERY WORKS</div>
+            <div class="hud-text hud-result" id="hud-result"></div>
+            <div class="hud-text hud-helper" id="hud-helper"></div>
+          </div>
+        </div>
       </section>
     </main>
     <aside class="rotate-prompt" id="rotate-prompt" role="status" aria-live="polite" aria-hidden="true">

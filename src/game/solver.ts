@@ -8,6 +8,7 @@ import {
   PLAYER_HEIGHT,
   PLAYER_WIDTH,
 } from "./constants";
+import { tunnelOffsetAt } from "./chunks";
 import type { ChunkDefinition, Envelope, HazardSpec, SolidSpec } from "./types";
 
 interface SolverState {
@@ -45,28 +46,29 @@ function startingStates(envelope: Envelope): SolverState[] {
   ];
 }
 
-function movingY(hazard: HazardSpec, time: number, phaseOffset: number): number {
-  if (!hazard.motion) return hazard.y;
+function movingY(hazard: HazardSpec, time: number, phaseOffset: number, tunnelOffset: number): number {
+  if (!hazard.motion) return hazard.y + tunnelOffset;
   const phase = (hazard.motion.phase ?? 0) + phaseOffset;
-  return hazard.y + Math.sin((time * hazard.motion.frequency + phase) * Math.PI * 2) * hazard.motion.amplitude;
+  return hazard.y + tunnelOffset + Math.sin((time * hazard.motion.frequency + phase) * Math.PI * 2) * hazard.motion.amplitude;
 }
 
-function collidesHazard(state: SolverState, progress: number, hazard: HazardSpec, time: number, phaseOffset: number): boolean {
+function collidesHazard(state: SolverState, progress: number, hazard: HazardSpec, time: number, phaseOffset: number, tunnelOffset: number): boolean {
   const horizontal = progress + halfW > hazard.x && progress - halfW < hazard.x + hazard.w;
   if (!horizontal) return false;
-  const y = movingY(hazard, time, phaseOffset);
+  const y = movingY(hazard, time, phaseOffset, tunnelOffset);
   return state.y + halfH > y && state.y - halfH < y + hazard.h;
 }
 
-function resolveSolid(state: SolverState, previousY: number, progress: number, solid: SolidSpec): void {
+function resolveSolid(state: SolverState, previousY: number, progress: number, solid: SolidSpec, tunnelOffset: number): void {
   if (progress + halfW <= solid.x || progress - halfW >= solid.x + solid.w) return;
+  const solidY = solid.y + tunnelOffset;
   if (state.gravity === 1) {
-    if (previousY + halfH <= solid.y && state.y + halfH >= solid.y && state.vy >= 0) {
-      state.y = solid.y - halfH;
+    if (previousY + halfH <= solidY && state.y + halfH >= solidY && state.vy >= 0) {
+      state.y = solidY - halfH;
       state.vy = 0;
     }
   } else {
-    const underside = solid.y + solid.h;
+    const underside = solidY + solid.h;
     if (previousY - halfH >= underside && state.y - halfH <= underside && state.vy <= 0) {
       state.y = underside + halfH;
       state.vy = 0;
@@ -74,7 +76,7 @@ function resolveSolid(state: SolverState, previousY: number, progress: number, s
   }
 }
 
-function integrate(source: SolverState, flipped: boolean): SolverState {
+function integrate(source: SolverState, flipped: boolean, tunnelOffset: number): SolverState {
   const state = { ...source };
   if (flipped) {
     state.gravity = state.gravity === 1 ? -1 : 1;
@@ -84,12 +86,14 @@ function integrate(source: SolverState, flipped: boolean): SolverState {
   }
   state.vy = clamp(state.vy + state.gravity * GRAVITY_ACCELERATION * FIXED_STEP_SECONDS, -MAX_VERTICAL_SPEED, MAX_VERTICAL_SPEED);
   state.y += state.vy * FIXED_STEP_SECONDS;
-  if (state.y + PLAYER_HEIGHT / 2 >= PLAY_BOTTOM) {
-    state.y = PLAY_BOTTOM - PLAYER_HEIGHT / 2;
+  const floor = PLAY_BOTTOM + tunnelOffset;
+  const ceiling = PLAY_TOP + tunnelOffset;
+  if (state.y + PLAYER_HEIGHT / 2 >= floor) {
+    state.y = floor - PLAYER_HEIGHT / 2;
     if (state.vy > 0) state.vy = 0;
   }
-  if (state.y - PLAYER_HEIGHT / 2 <= PLAY_TOP) {
-    state.y = PLAY_TOP + PLAYER_HEIGHT / 2;
+  if (state.y - PLAYER_HEIGHT / 2 <= ceiling) {
+    state.y = ceiling + PLAYER_HEIGHT / 2;
     if (state.vy < 0) state.vy = 0;
   }
   return state;
@@ -110,6 +114,7 @@ export function canTraverseChunk(
   for (let frame = 0; frame <= frameCount; frame += 1) {
     const progress = frame * speed * FIXED_STEP_SECONDS;
     const time = frame * FIXED_STEP_SECONDS;
+    const tunnelOffset = tunnelOffsetAt(definition, progress);
     const next = new Map<string, SolverState>();
     for (const source of states) {
       // A 30 Hz decision grid is substantially finer than the 80 ms input debounce
@@ -117,9 +122,18 @@ export function canTraverseChunk(
       const choices = source.cooldown === 0 && frame % 2 === 0 ? [false, true] : [false];
       for (const flipped of choices) {
         const previousY = source.y;
-        const state = integrate(source, flipped);
-        for (const solid of definition.solids) resolveSolid(state, previousY, progress, solid);
-        if (definition.hazards.some((hazard) => collidesHazard(state, progress, hazard, time, phaseOffset))) continue;
+        const state = integrate(source, flipped, tunnelOffset);
+        for (const solid of definition.solids) {
+          resolveSolid(state, previousY, progress, solid, tunnelOffsetAt(definition, solid.x + solid.w / 2));
+        }
+        if (definition.hazards.some((hazard) => collidesHazard(
+          state,
+          progress,
+          hazard,
+          time,
+          phaseOffset,
+          tunnelOffsetAt(definition, hazard.x + hazard.w / 2),
+        ))) continue;
         next.set(stateKey(state), state);
       }
     }
