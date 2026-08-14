@@ -10,6 +10,7 @@ import {
   PLAYER_MIN_X,
   PLAYER_RECOVERY_SPEED,
   PLAYER_X,
+  SANDJET_NOZZLE_DEPTH,
 } from "../src/game/constants";
 import { CHUNKS, TRANSITION_CHUNKS, envelopesCompatible, tunnelOffsetAt, validateChunkLibrary } from "../src/game/chunks";
 import { GameModel } from "../src/game/model";
@@ -247,6 +248,40 @@ describe("birdddddd model", () => {
     expect(erupting.visibleRects()[0]?.active).toBe(true);
     erupting.step();
     expect(erupting.mode).toBe("dead");
+  });
+
+  it("keeps the sand-jet nozzle safe while the separated plume remains lethal", () => {
+    const floorJet: ChunkDefinition = {
+      ...safeChunk(),
+      id: "test-floor-sandjet",
+      hazards: [{ x: PLAYER_X - 5, y: 80, w: 10, h: 42, kind: "sandJet", attachment: "floor" }],
+    };
+    const nozzleContact = new GameModel(901);
+    nozzleContact.chunks = [activate(floorJet)];
+    nozzleContact.mode = "playing";
+    nozzleContact.playerY = 122 - SANDJET_NOZZLE_DEPTH / 2;
+    nozzleContact.step();
+    expect(nozzleContact.mode).toBe("playing");
+
+    const plumeContact = new GameModel(902);
+    plumeContact.chunks = [activate(floorJet)];
+    plumeContact.mode = "playing";
+    plumeContact.playerY = 92;
+    plumeContact.step();
+    expect(plumeContact.mode).toBe("dead");
+
+    const ceilingJet: ChunkDefinition = {
+      ...safeChunk(),
+      id: "test-ceiling-sandjet",
+      hazards: [{ x: PLAYER_X - 5, y: 58, w: 10, h: 42, kind: "sandJet", attachment: "ceiling", flipY: true }],
+    };
+    const ceilingNozzleContact = new GameModel(903);
+    ceilingNozzleContact.chunks = [activate(ceilingJet)];
+    ceilingNozzleContact.mode = "playing";
+    ceilingNozzleContact.gravity = -1;
+    ceilingNozzleContact.playerY = 58 + SANDJET_NOZZLE_DEPTH / 2;
+    ceilingNozzleContact.step();
+    expect(ceilingNozzleContact.mode).toBe("playing");
   });
 
   it("moves minecarts horizontally without changing their authored track height", () => {

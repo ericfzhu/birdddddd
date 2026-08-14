@@ -12,6 +12,7 @@ import {
   PLAYER_WIDTH,
   PLAYER_X,
   RENDER_DENSITY,
+  SANDJET_NOZZLE_DEPTH,
   VIEW_HEIGHT,
   VIEW_WIDTH,
 } from "./constants";
@@ -899,6 +900,7 @@ export class AviaryScene extends Phaser.Scene {
         const active = rect.active !== false;
         const centerX = Math.round(rect.x + rect.w / 2);
         const baseY = Math.round(rect.flipY ? rect.y : rect.y + rect.h);
+        const openingY = baseY + (rect.flipY ? SANDJET_NOZZLE_DEPTH : -SANDJET_NOZZLE_DEPTH);
         const warningSprite = active
           ? takeSprite(interactiveDangerTextureKey(rect.chapter, "sandjet"))
           : undefined;
@@ -914,12 +916,13 @@ export class AviaryScene extends Phaser.Scene {
           .setOrigin(0.5, 1)
           .setDisplaySize(rect.w + 8, 16)
           .setPosition(centerX, baseY)
+          .setAlpha(1)
           .setFlipY(rect.flipY === true);
         if (warningSprite && plumeSprite) {
           plumeSprite
             .setOrigin(0.5, 1)
-            .setDisplaySize(rect.w + 8, rect.h + 4)
-            .setPosition(centerX, baseY)
+            .setDisplaySize(rect.w + 8, rect.h - SANDJET_NOZZLE_DEPTH + 4)
+            .setPosition(centerX, openingY)
             .setFlipY(rect.flipY === true);
           this.syncDangerSilhouette(warningSprite, plumeSprite, 4);
         }

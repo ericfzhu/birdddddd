@@ -15,10 +15,15 @@ def main() -> None:
     parser.add_argument("output", type=Path)
     parser.add_argument("--max-width", type=int, required=True)
     parser.add_argument("--max-height", type=int, required=True)
+    parser.add_argument("--alpha-threshold", type=int, default=0)
     args = parser.parse_args()
+    if not 0 <= args.alpha_threshold < 255:
+        raise SystemExit("--alpha-threshold must be between 0 and 254")
 
     image = Image.open(args.input).convert("RGBA")
-    bounds = image.getchannel("A").getbbox()
+    alpha = image.getchannel("A")
+    crop_mask = alpha.point(lambda value: 255 if value > args.alpha_threshold else 0)
+    bounds = crop_mask.getbbox()
     if not bounds:
         raise SystemExit(f"No visible pixels in {args.input}")
     image = image.crop(bounds)

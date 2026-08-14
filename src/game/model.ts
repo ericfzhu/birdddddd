@@ -13,6 +13,7 @@ import {
   PLAYER_WIDTH,
   PLAYER_X,
   RESTART_DELAY_SECONDS,
+  SANDJET_NOZZLE_DEPTH,
   TERRAIN_SPIKE_COLLISION_RATIO,
   VIEW_WIDTH,
   chapterForGates,
@@ -471,9 +472,18 @@ export class GameModel {
         const motion = this.motionOffset(hazard);
         if (!this.hazardIsActive(hazard)) continue;
         const terrainSpike = hazard.kind === "thorns" || hazard.kind === "barbs";
-        const collisionHeight = terrainSpike ? hazard.h * TERRAIN_SPIKE_COLLISION_RATIO : hazard.h;
+        const sandJet = hazard.kind === "sandJet";
+        const collisionHeight = terrainSpike
+          ? hazard.h * TERRAIN_SPIKE_COLLISION_RATIO
+          : sandJet
+            ? Math.max(1, hazard.h - SANDJET_NOZZLE_DEPTH)
+            : hazard.h;
         const ceilingSpike = hazard.attachment === "ceiling" || hazard.flipY === true;
-        const collisionInsetY = terrainSpike && !ceilingSpike ? hazard.h - collisionHeight : 0;
+        const collisionInsetY = terrainSpike && !ceilingSpike
+          ? hazard.h - collisionHeight
+          : sandJet && ceilingSpike
+            ? SANDJET_NOZZLE_DEPTH
+            : 0;
         const rect = {
           x: origin + hazard.x + motion.x,
           y: hazard.y + tunnelOffset + motion.y + collisionInsetY,
