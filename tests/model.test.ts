@@ -7,7 +7,7 @@ import { CAMERA_DEAD_ZONE_BOTTOM, CAMERA_DEAD_ZONE_TOP, cameraTargetY, trackCame
 import { spikeClusterLayout, spikeRotationForNormal, TERRAIN_SPIKE_POINT_WIDTH } from "../src/game/hazards";
 import { PROP_ART, propGroundPlacement, propLayout } from "../src/game/props";
 import { verdantParallaxState } from "../src/game/parallax";
-import { authoredAssetForHazard, INTERACTIVE_ART } from "../src/game/interactive-art";
+import { authoredAssetForHazard, INTERACTIVE_ART, TRANSITION_ART, transitionArtFor } from "../src/game/interactive-art";
 import type { ActiveChunk, ChunkDefinition } from "../src/game/types";
 
 const safeChunk = (feathers: Array<{ x: number; y: number }> = []): ChunkDefinition => ({
@@ -151,6 +151,16 @@ describe("birdddddd model", () => {
         expect(authoredAssetForHazard(chapter, kind), `chapter ${chapter} is missing authored ${kind} art`).toBeDefined();
       }
       expect(INTERACTIVE_ART[chapter]?.assets).toEqual(expect.arrayContaining(["platform", "pillar", "thorn", "barb"]));
+    }
+  });
+
+  it("provides authored dressing for every remaining chapter passage", () => {
+    const remaining = TRANSITION_CHUNKS.filter((chunk) => (chunk.transition?.from ?? -1) >= 2);
+    expect(TRANSITION_ART).toHaveLength(remaining.length);
+    for (const chunk of remaining) {
+      const transition = chunk.transition;
+      if (!transition) throw new Error("Expected a transition definition");
+      expect(transitionArtFor(transition.from, transition.to), chunk.id).toBeDefined();
     }
   });
 

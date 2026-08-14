@@ -18,7 +18,15 @@ import {
 import { spikeClusterLayout, spikeRotationForNormal } from "./hazards";
 import { verdantParallaxState, type ParallaxCrop } from "./parallax";
 import { propGroundPlacement, propLayout } from "./props";
-import { authoredAssetForHazard, interactiveAssetPath, interactiveTextureKey, INTERACTIVE_ART } from "./interactive-art";
+import {
+  authoredAssetForHazard,
+  interactiveAssetPath,
+  interactiveTextureKey,
+  INTERACTIVE_ART,
+  TRANSITION_ART,
+  transitionArtFor,
+  transitionTextureKey,
+} from "./interactive-art";
 import { GameModel } from "./model";
 import { HudText } from "./hud";
 import type { GameEvent, VisibleRect, VisibleTunnelPoint } from "./types";
@@ -107,6 +115,12 @@ export class AviaryScene extends Phaser.Scene {
         this.load.image(interactiveTextureKey(chapter, asset), interactiveAssetPath(family, asset));
       }
     });
+    for (const transition of TRANSITION_ART) {
+      this.load.image(
+        transitionTextureKey(transition.from, transition.to),
+        `/assets/transition-${transition.slug}-v2-runtime.png`,
+      );
+    }
     this.load.spritesheet("biome-props-atlas", "/assets/biome-props-atlas-runtime.png", {
       frameWidth: 128,
       frameHeight: 128,
@@ -610,8 +624,26 @@ export class AviaryScene extends Phaser.Scene {
     for (const prop of this.propPool) prop.setVisible(false);
     let propIndex = 0;
     for (const chunk of this.model.chunks) {
-      if (chunk.definition.transition) continue;
       const origin = chunk.startX - this.model.distance;
+      const transition = chunk.definition.transition;
+      if (transition) {
+        const art = transitionArtFor(transition.from, transition.to);
+        if (!art) continue;
+        const x = origin + chunk.definition.width * 0.5;
+        if (x < -48 || x > VIEW_WIDTH + 48) continue;
+        const point = this.tunnelPointAt(tunnel, x);
+        const prop = this.propPool[propIndex++];
+        if (!point || !prop) continue;
+        prop
+          .setTexture(transitionTextureKey(transition.from, transition.to))
+          .setOrigin(0.5, 1)
+          .setDisplaySize(72, 42)
+          .setPosition(Math.round(x), Math.round(point.floor + 1))
+          .setRotation(0)
+          .setAlpha(0.94)
+          .setVisible(true);
+        continue;
+      }
       const idValue = [...chunk.definition.id].reduce((total, character) => total + character.charCodeAt(0), 0);
       const localX = 72 + (idValue % 38);
       const x = origin + localX;

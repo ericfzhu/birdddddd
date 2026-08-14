@@ -15,5 +15,8 @@ These high-resolution PNGs are original project assets generated with the built-
 - `biome-underground-corruption-*`: a bone-laced indigo rift panorama, cyan-fissured fossil terrain, and a thorn-root monolith.
 - `biome-abandoned-minecart-*`: a supported timber railway panorama, riveted mine-rock terrain, and a derailed cart/signal landmark.
 - `biome-underworld-*`: a lava-citadel panorama, fused obsidian furnace terrain, and a chained molten furnace landmark.
+- `biome-*-{platform,pillar,thorn,barb}-v2.png`: isolated safe-terrain and mounted-hazard silhouettes for every biome. Each pack inherits its panorama's material language rather than recolouring a shared sprite.
+- Biome-specific interactive `v2` assets include a marble press, Violet crystal and root gate, Corruption spore and rib gate, minecart/rail machinery, Ashen ember/furnace jaw/chain machinery, and separate active/warning Underworld furnace vents.
+- `transition-*-v2.png`: six safe threshold landmarks that physically blend the adjacent chapter materials from Sunken Dunes through Underworld.
 
-All prompts required crisp hard-edged pixels, deliberate clustered shading, original silhouettes, surface-grounded construction, no characters or UI, and no copied game assets. Runtime copies in `public/assets` are nearest-neighbour reductions used by Phaser; Vite does not ship this source directory.
+All prompts required crisp hard-edged pixels, deliberate clustered shading, original silhouettes, surface-grounded construction, no characters or UI, and no copied game assets. Interactive and transition pieces were generated one asset at a time against the relevant environment sources on 2026-08-14, using a flat chroma-key field that was removed before export. Runtime copies in `public/assets` are cropped nearest-neighbour reductions used by Phaser; Vite does not ship this source directory.

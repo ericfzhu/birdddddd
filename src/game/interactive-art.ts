@@ -23,6 +23,12 @@ export interface InteractiveArtFamily {
   hazards: Partial<Record<HazardKind, InteractiveAssetKind>>;
 }
 
+export interface TransitionArt {
+  from: number;
+  to: number;
+  slug: string;
+}
+
 const common = ["platform", "pillar", "thorn", "barb"] as const;
 
 export const INTERACTIVE_ART: readonly InteractiveArtFamily[] = [
@@ -37,6 +43,15 @@ export const INTERACTIVE_ART: readonly InteractiveArtFamily[] = [
   { slug: "underworld", assets: [...common, "flame", "flame-warning", "spinner", "shutter"], hazards: { thorns: "thorn", barbs: "barb", flame: "flame", spinner: "spinner", shutter: "shutter" } },
 ] as const;
 
+export const TRANSITION_ART: readonly TransitionArt[] = [
+  { from: 2, to: 3, slug: "dunes-marble" },
+  { from: 3, to: 4, slug: "marble-violet" },
+  { from: 4, to: 5, slug: "violet-corruption" },
+  { from: 5, to: 6, slug: "corruption-minecart" },
+  { from: 6, to: 7, slug: "minecart-ashen" },
+  { from: 7, to: 8, slug: "ashen-underworld" },
+] as const;
+
 export function interactiveTextureKey(chapter: number, asset: InteractiveAssetKind): string {
   return `authored-terrain-${chapter}-${asset}`;
 }
@@ -47,4 +62,12 @@ export function interactiveAssetPath(family: InteractiveArtFamily, asset: Intera
 
 export function authoredAssetForHazard(chapter: number, kind: HazardKind): InteractiveAssetKind | undefined {
   return INTERACTIVE_ART[chapter]?.hazards[kind];
+}
+
+export function transitionTextureKey(from: number, to: number): string {
+  return `authored-transition-${from}-${to}`;
+}
+
+export function transitionArtFor(from: number, to: number): TransitionArt | undefined {
+  return TRANSITION_ART.find((asset) => asset.from === from && asset.to === to);
 }
