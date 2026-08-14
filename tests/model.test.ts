@@ -23,7 +23,7 @@ import {
   TERRAIN_SPIKE_POINT_WIDTH,
 } from "../src/game/hazards";
 import { PROP_ART, propGroundPlacement, propLayout } from "../src/game/props";
-import { verdantParallaxState } from "../src/game/parallax";
+import { desertParallaxState, verdantParallaxState } from "../src/game/parallax";
 import {
   authoredAssetForHazard,
   interactiveDangerTextureKey,
@@ -549,6 +549,21 @@ describe("birdddddd model", () => {
     expect(moved.far.y).toBeLessThan(start.far.y);
 
     const reduced = verdantParallaxState(200, 20, true);
+    expect(reduced.far.x).toBeLessThan(moved.far.x);
+    expect(reduced.mid.x).toBeLessThan(moved.mid.x);
+    expect(reduced.near.x).toBeLessThan(moved.near.x);
+  });
+
+  it("moves Sunken Dunes background layers at increasing depth rates", () => {
+    const start = desertParallaxState(0, 0, false);
+    const moved = desertParallaxState(400, -20, false);
+    expect(start.far.x).toBe(0);
+    expect(moved.far.x).toBe(7);
+    expect(moved.mid.x).toBeGreaterThan(moved.far.x);
+    expect(moved.near.x).toBeGreaterThan(moved.mid.x);
+    expect(moved.far.y).toBeGreaterThan(start.far.y);
+
+    const reduced = desertParallaxState(400, -20, true);
     expect(reduced.far.x).toBeLessThan(moved.far.x);
     expect(reduced.mid.x).toBeLessThan(moved.mid.x);
     expect(reduced.near.x).toBeLessThan(moved.near.x);

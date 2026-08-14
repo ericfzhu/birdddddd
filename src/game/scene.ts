@@ -17,7 +17,7 @@ import {
   VIEW_WIDTH,
 } from "./constants";
 import { sandJetVisualLayout, spikeClusterLayout, spikeRotationForNormal } from "./hazards";
-import { verdantParallaxState, type ParallaxCrop } from "./parallax";
+import { desertParallaxState, verdantParallaxState, type ParallaxCrop } from "./parallax";
 import { propGroundPlacement, propLayout } from "./props";
 import {
   authoredAssetForHazard,
@@ -54,7 +54,7 @@ const DANGER_RED = 0xff1238;
 const BACKGROUND_ASSETS = [
   "biome-forest-far-background-v2-runtime.png",
   "biome-underground-jungle-background-runtime.png",
-  "biome-desert-background-runtime.png",
+  "biome-desert-far-background-v2-runtime.png",
   "biome-marble-cave-background-runtime.png",
   "biome-violet-background-runtime.png",
   "biome-underground-corruption-background-runtime.png",
@@ -73,6 +73,8 @@ export class AviaryScene extends Phaser.Scene {
   private biomeBackgrounds: Phaser.GameObjects.Image[] = [];
   private verdantMidground!: Phaser.GameObjects.Image;
   private verdantNear!: Phaser.GameObjects.Image;
+  private desertMidground!: Phaser.GameObjects.Image;
+  private desertNear!: Phaser.GameObjects.Image;
   private terrainBase!: Phaser.GameObjects.Graphics;
   private terrainTiles!: Phaser.GameObjects.Container;
   private terrainTilePool: Phaser.GameObjects.Image[] = [];
@@ -113,6 +115,8 @@ export class AviaryScene extends Phaser.Scene {
     BACKGROUND_ASSETS.forEach((asset, chapter) => this.load.image(`biome-background-${chapter}`, `/assets/${asset}`));
     this.load.image("verdant-midground", "/assets/biome-forest-midground-v2-runtime.png");
     this.load.image("verdant-near", "/assets/biome-forest-near-v2-runtime.png");
+    this.load.image("desert-midground", "/assets/biome-desert-midground-v2-runtime.png");
+    this.load.image("desert-near", "/assets/biome-desert-near-v2-runtime.png");
     INTERACTIVE_ART.forEach((family, chapter) => {
       for (const asset of family.assets) {
         this.load.image(interactiveTextureKey(chapter, asset), interactiveAssetPath(family, asset));
@@ -168,6 +172,8 @@ export class AviaryScene extends Phaser.Scene {
     }
     this.verdantMidground = this.add.image(0, 0, "verdant-midground").setOrigin(0, 0).setVisible(false);
     this.verdantNear = this.add.image(0, 0, "verdant-near").setOrigin(0, 0).setVisible(false);
+    this.desertMidground = this.add.image(0, 0, "desert-midground").setOrigin(0, 0).setVisible(false);
+    this.desertNear = this.add.image(0, 0, "desert-near").setOrigin(0, 0).setVisible(false);
     this.terrainBase = this.add.graphics();
     this.terrainTiles = this.add.container();
     for (let index = 0; index < 768; index += 1) {
@@ -441,8 +447,10 @@ export class AviaryScene extends Phaser.Scene {
       if (chapter === to) alpha = to === from ? 1 : progress;
       image.setVisible(alpha > 0).setAlpha(alpha);
       if (alpha <= 0) continue;
-      if (chapter === 0) {
-        const parallax = verdantParallaxState(this.model.distance, this.cameraOffsetY, this.settings.reducedMotion);
+      if (chapter === 0 || chapter === 2) {
+        const parallax = chapter === 0
+          ? verdantParallaxState(this.model.distance, this.cameraOffsetY, this.settings.reducedMotion)
+          : desertParallaxState(this.model.distance, this.cameraOffsetY, this.settings.reducedMotion);
         this.applyParallaxCrop(image, parallax.far);
       } else {
         image.setCrop().setDisplaySize(VIEW_WIDTH, VIEW_HEIGHT);
@@ -452,6 +460,11 @@ export class AviaryScene extends Phaser.Scene {
     const parallax = verdantParallaxState(this.model.distance, this.cameraOffsetY, this.settings.reducedMotion);
     this.renderParallaxLayer(this.verdantMidground, parallax.mid, verdantAlpha);
     this.renderParallaxLayer(this.verdantNear, parallax.near, verdantAlpha);
+
+    const desertAlpha = from === 2 ? 1 - progress : to === 2 ? progress : 0;
+    const desertParallax = desertParallaxState(this.model.distance, this.cameraOffsetY, this.settings.reducedMotion);
+    this.renderParallaxLayer(this.desertMidground, desertParallax.mid, desertAlpha);
+    this.renderParallaxLayer(this.desertNear, desertParallax.near, desertAlpha);
   }
 
   private applyParallaxCrop(image: Phaser.GameObjects.Image, crop: ParallaxCrop): void {
