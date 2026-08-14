@@ -18,6 +18,7 @@ import {
 import { spikeClusterLayout, spikeRotationForNormal } from "./hazards";
 import { verdantParallaxState, type ParallaxCrop } from "./parallax";
 import { propGroundPlacement, propLayout } from "./props";
+import { authoredAssetForHazard, interactiveAssetPath, interactiveTextureKey, INTERACTIVE_ART } from "./interactive-art";
 import { GameModel } from "./model";
 import { HudText } from "./hud";
 import type { GameEvent, VisibleRect, VisibleTunnelPoint } from "./types";
@@ -53,7 +54,6 @@ const BACKGROUND_ASSETS = [
 const NEW_ART_CHAPTERS = [1, 3, 5, 6, 8] as const;
 const NEW_ART_SLUGS = ["underground-jungle", "marble-cave", "underground-corruption", "abandoned-minecart", "underworld"] as const;
 const LEGACY_ATLAS_CHAPTER = new Map<number, number>([[0, 0], [2, 1], [4, 2], [7, 3]]);
-const AUTHORED_INTERACTIVE_TERRAIN = ["forest", "underground-jungle", "desert"] as const;
 
 export class AviaryScene extends Phaser.Scene {
   model!: GameModel;
@@ -69,6 +69,7 @@ export class AviaryScene extends Phaser.Scene {
   private propPool: Phaser.GameObjects.Image[] = [];
   private authoredTerrainLayer!: Phaser.GameObjects.Container;
   private authoredTerrainPool: Phaser.GameObjects.Image[] = [];
+  private authoredRects = new Set<VisibleRect>();
   private world!: Phaser.GameObjects.Graphics;
   private effects!: Phaser.GameObjects.Graphics;
   private ui!: Phaser.GameObjects.Graphics;
@@ -101,12 +102,11 @@ export class AviaryScene extends Phaser.Scene {
     BACKGROUND_ASSETS.forEach((asset, chapter) => this.load.image(`biome-background-${chapter}`, `/assets/${asset}`));
     this.load.image("verdant-midground", "/assets/biome-forest-midground-v2-runtime.png");
     this.load.image("verdant-near", "/assets/biome-forest-near-v2-runtime.png");
-    AUTHORED_INTERACTIVE_TERRAIN.forEach((slug, chapter) => {
-      for (const kind of ["platform", "pillar", "thorn", "barb"] as const) {
-        this.load.image(`authored-terrain-${chapter}-${kind}`, `/assets/biome-${slug}-${kind}-v2-runtime.png`);
+    INTERACTIVE_ART.forEach((family, chapter) => {
+      for (const asset of family.assets) {
+        this.load.image(interactiveTextureKey(chapter, asset), interactiveAssetPath(family, asset));
       }
     });
-    this.load.image("authored-terrain-1-vine", "/assets/biome-underground-jungle-vine-v2-runtime.png");
     this.load.spritesheet("biome-props-atlas", "/assets/biome-props-atlas-runtime.png", {
       frameWidth: 128,
       frameHeight: 128,
@@ -740,6 +740,7 @@ export class AviaryScene extends Phaser.Scene {
 
   private renderAuthoredTerrainSprites(rects: VisibleRect[]): void {
     for (const sprite of this.authoredTerrainPool) sprite.setVisible(false);
+    this.authoredRects.clear();
     let poolIndex = 0;
     const takeSprite = (texture: string): Phaser.GameObjects.Image | undefined => {
       const sprite = this.authoredTerrainPool[poolIndex++];
@@ -756,53 +757,96 @@ export class AviaryScene extends Phaser.Scene {
     };
 
     for (const rect of rects) {
-      if (rect.chapter < 0 || rect.chapter >= AUTHORED_INTERACTIVE_TERRAIN.length) continue;
+      const family = INTERACTIVE_ART[rect.chapter];
+      if (!family) continue;
       const texturePrefix = `authored-terrain-${rect.chapter}`;
-      if (rect.chapter === 1 && rect.kind === "vine") {
-        takeSprite("authored-terrain-1-vine")
-          ?.setOrigin(0.5, 0)
-          .setDisplaySize(rect.w + 6, rect.h + 2)
-          .setPosition(Math.round(rect.x + rect.w / 2), Math.round(rect.y));
-        continue;
-      }
       if (rect.kind === "solid") {
+        let sprite: Phaser.GameObjects.Image | undefined;
         if (rect.detail === "cage") {
-          takeSprite(`${texturePrefix}-pillar`)
+          sprite = takeSprite(`${texturePrefix}-pillar`)
             ?.setOrigin(0.5, 0.5)
             .setDisplaySize(rect.w + 2, rect.h)
             .setPosition(Math.round(rect.x + rect.w / 2), Math.round(rect.y + rect.h / 2));
         } else {
-          takeSprite(`${texturePrefix}-platform`)
+          sprite = takeSprite(`${texturePrefix}-platform`)
             ?.setOrigin(0.5, 0.5)
             .setDisplaySize(rect.w, rect.h + 2)
             .setPosition(Math.round(rect.x + rect.w / 2), Math.round(rect.y + rect.h / 2));
         }
+        if (sprite) this.authoredRects.add(rect);
         continue;
       }
-      if (rect.kind !== "thorns" && rect.kind !== "barbs") continue;
-      const ceiling = rect.attachment === "ceiling" || rect.flipY === true;
-      for (const point of spikeClusterLayout(rect.w)) {
-        const centerX = rect.x + point.offset + point.width / 2;
-        const surfaceY = this.terrainSurfaceYAt(centerX, ceiling);
-        const normal = this.terrainInwardNormalAt(centerX, ceiling);
-        const texture = `${texturePrefix}-${rect.kind === "barbs" ? "barb" : "thorn"}`;
-        const rotation = spikeRotationForNormal(normal.x, normal.y);
-        const warningEdge = takeSprite(texture);
-        if (warningEdge) {
+
+      if (rect.kind === "thorns" || rect.kind === "barbs") {
+        const ceiling = rect.attachment === "ceiling" || rect.flipY === true;
+        let complete = true;
+        for (const point of spikeClusterLayout(rect.w)) {
+          const centerX = rect.x + point.offset + point.width / 2;
+          const surfaceY = this.terrainSurfaceYAt(centerX, ceiling);
+          const normal = this.terrainInwardNormalAt(centerX, ceiling);
+          const texture = `${texturePrefix}-${rect.kind === "barbs" ? "barb" : "thorn"}`;
+          const rotation = spikeRotationForNormal(normal.x, normal.y);
+          const warningEdge = takeSprite(texture);
+          const spike = takeSprite(texture);
+          if (!warningEdge || !spike) {
+            complete = false;
+            continue;
+          }
           warningEdge
             .setOrigin(0.5, 1)
             .setDisplaySize(point.width + 4, rect.h + 4)
             .setPosition(Math.round(centerX), Math.round(surfaceY))
             .setRotation(rotation)
-            .setAlpha(0.42);
-          warningEdge.setTint(COLORS.coral).setTintMode(Phaser.TintModes.FILL);
+            .setAlpha(0.42)
+            .setTint(COLORS.coral)
+            .setTintMode(Phaser.TintModes.FILL);
+          spike
+            .setOrigin(0.5, 1)
+            .setDisplaySize(point.width + 2, rect.h + 2)
+            .setPosition(Math.round(centerX), Math.round(surfaceY))
+            .setRotation(rotation);
         }
-        takeSprite(texture)
-          ?.setOrigin(0.5, 1)
-          .setDisplaySize(point.width + 2, rect.h + 2)
-          .setPosition(Math.round(centerX), Math.round(surfaceY))
-          .setRotation(rotation);
+        if (complete) this.authoredRects.add(rect);
+        continue;
       }
+
+      const asset = authoredAssetForHazard(rect.chapter, rect.kind);
+      if (!asset) continue;
+      const texture = interactiveTextureKey(rect.chapter, asset);
+      const centerX = Math.round(rect.x + rect.w / 2);
+      const centerY = Math.round(rect.y + rect.h / 2);
+      const sprite = takeSprite(texture);
+      if (!sprite) continue;
+
+      if (rect.kind === "vine") {
+        sprite.setOrigin(0.5, 0).setDisplaySize(rect.w + 6, rect.h + 2).setPosition(centerX, Math.round(rect.y));
+      } else if (rect.kind === "flame") {
+        const ceiling = rect.attachment === "ceiling" || rect.flipY === true;
+        const flameAsset = rect.active === false ? "flame-warning" : "flame";
+        sprite
+          .setTexture(interactiveTextureKey(rect.chapter, flameAsset))
+          .setOrigin(0.5, 1)
+          .setDisplaySize(rect.w + 8, rect.active === false ? 14 : rect.h + 4)
+          .setPosition(centerX, Math.round(ceiling ? rect.y : rect.y + rect.h))
+          .setFlipY(ceiling);
+      } else if (rect.kind === "shutter") {
+        sprite.setOrigin(0.5, 0.5).setDisplaySize(rect.w + 6, rect.h + 4).setPosition(centerX, centerY);
+      } else if (rect.kind === "beak") {
+        sprite.setOrigin(0.5, 0.5).setDisplaySize(rect.w + 4, rect.h + 3).setPosition(centerX, centerY).setFlipY(rect.flipY === true);
+      } else {
+        sprite
+          .setOrigin(0.5, 0.5)
+          .setDisplaySize(rect.w + (rect.kind === "cart" ? 4 : 6), rect.h + 6)
+          .setPosition(centerX, centerY);
+        if (rect.kind === "spinner") sprite.setRotation(this.settings.reducedMotion ? 0 : this.uiTime * 3.4);
+        if (rect.kind === "cart" && !this.settings.reducedMotion) sprite.setRotation(Math.sin(this.uiTime * 10) * 0.025);
+        if (rect.kind === "crystal" && !this.settings.reducedMotion) sprite.setRotation(Math.sin(this.uiTime * 2.6) * 0.08);
+        if ((rect.kind === "spore" || rect.kind === "ember") && !this.settings.reducedMotion) {
+          const pulse = 1 + Math.sin(this.uiTime * 6) * 0.06;
+          sprite.setScale(sprite.scaleX * pulse, sprite.scaleY * pulse);
+        }
+      }
+      this.authoredRects.add(rect);
     }
   }
 
@@ -871,9 +915,7 @@ export class AviaryScene extends Phaser.Scene {
   }
 
   private drawRectEntity(g: Phaser.GameObjects.Graphics, rect: VisibleRect): void {
-    if (rect.chapter >= 0 && rect.chapter < AUTHORED_INTERACTIVE_TERRAIN.length
-      && (rect.kind === "solid" || rect.kind === "thorns" || rect.kind === "barbs")) return;
-    if (rect.chapter === 1 && rect.kind === "vine") return;
+    if (this.authoredRects.has(rect)) return;
     if (rect.kind === "solid") {
       if (rect.detail === "cage") {
         this.drawCagePillar(g, rect);

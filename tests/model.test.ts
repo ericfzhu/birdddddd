@@ -7,6 +7,7 @@ import { CAMERA_DEAD_ZONE_BOTTOM, CAMERA_DEAD_ZONE_TOP, cameraTargetY, trackCame
 import { spikeClusterLayout, spikeRotationForNormal, TERRAIN_SPIKE_POINT_WIDTH } from "../src/game/hazards";
 import { PROP_ART, propGroundPlacement, propLayout } from "../src/game/props";
 import { verdantParallaxState } from "../src/game/parallax";
+import { authoredAssetForHazard, INTERACTIVE_ART } from "../src/game/interactive-art";
 import type { ActiveChunk, ChunkDefinition } from "../src/game/types";
 
 const safeChunk = (feathers: Array<{ x: number; y: number }> = []): ChunkDefinition => ({
@@ -139,6 +140,17 @@ describe("birdddddd model", () => {
     for (const [chapter, kinds] of expectedKinds) {
       const authored = new Set(CHUNKS.filter((chunk) => chunk.chapter === chapter).flatMap((chunk) => chunk.hazards.map((hazard) => hazard.kind)));
       for (const kind of kinds) expect(authored.has(kind as never), `chapter ${chapter} should introduce ${kind}`).toBe(true);
+    }
+  });
+
+  it("maps every remaining biome hazard to an explicit authored asset", () => {
+    for (let chapter = 3; chapter < CHAPTERS.length; chapter += 1) {
+      expect(INTERACTIVE_ART[chapter], `chapter ${chapter} needs an interactive art family`).toBeDefined();
+      const kinds = new Set(CHUNKS.filter((chunk) => chunk.chapter === chapter).flatMap((chunk) => chunk.hazards.map((hazard) => hazard.kind)));
+      for (const kind of kinds) {
+        expect(authoredAssetForHazard(chapter, kind), `chapter ${chapter} is missing authored ${kind} art`).toBeDefined();
+      }
+      expect(INTERACTIVE_ART[chapter]?.assets).toEqual(expect.arrayContaining(["platform", "pillar", "thorn", "barb"]));
     }
   });
 
