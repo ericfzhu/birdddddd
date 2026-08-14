@@ -49,6 +49,7 @@ interface StoredSettings {
 const STORAGE_KEY = "birdddddd:v1";
 const LEGACY_STORAGE_KEY = "impossible-aviary:v1";
 const MINECART_DANGER_RED = 0xff1238;
+const MINECART_DANGER_TEXTURE = "authored-terrain-6-shutter-danger";
 const BACKGROUND_ASSETS = [
   "biome-forest-far-background-v2-runtime.png",
   "biome-underground-jungle-background-runtime.png",
@@ -139,6 +140,11 @@ export class AviaryScene extends Phaser.Scene {
 
   create(): void {
     this.cameras.main.setOrigin(0, 0).setZoom(RENDER_DENSITY).setRoundPixels(true);
+    this.createSolidSilhouetteTexture(
+      interactiveTextureKey(6, "shutter"),
+      MINECART_DANGER_TEXTURE,
+      `#${MINECART_DANGER_RED.toString(16).padStart(6, "0")}`,
+    );
     this.settings = this.loadSettings();
     const query = new URLSearchParams(window.location.search);
     const requestedSeed = Number(query.get("seed"));
@@ -190,6 +196,23 @@ export class AviaryScene extends Phaser.Scene {
     this.installTestHooks();
     this.renderFrame();
     window.dispatchEvent(new Event("birdddddd:scene-ready"));
+  }
+
+  private createSolidSilhouetteTexture(sourceKey: string, targetKey: string, color: string): void {
+    const source = this.textures.get(sourceKey).getSourceImage();
+    if (!(source instanceof HTMLImageElement || source instanceof HTMLCanvasElement)) {
+      throw new Error(`Silhouette source is not a drawable image: ${sourceKey}`);
+    }
+    const texture = this.textures.createCanvas(targetKey, source.width, source.height);
+    if (!texture) throw new Error(`Could not create silhouette texture: ${targetKey}`);
+    const context = texture.getContext();
+    context.clearRect(0, 0, source.width, source.height);
+    context.drawImage(source, 0, 0, source.width, source.height);
+    context.globalCompositeOperation = "source-in";
+    context.fillStyle = color;
+    context.fillRect(0, 0, source.width, source.height);
+    context.globalCompositeOperation = "source-over";
+    texture.refresh();
   }
 
   update(_time: number, deltaMs: number): void {
@@ -895,14 +918,12 @@ export class AviaryScene extends Phaser.Scene {
             sprite.setVisible(false);
             continue;
           }
-          const warningPulse = this.settings.reducedMotion ? 0.48 : 0.36 + (Math.sin(this.uiTime * 8) + 1) * 0.11;
           sprite
+            .setTexture(MINECART_DANGER_TEXTURE)
             .setOrigin(0.5, 0.5)
             .setDisplaySize(width + 7, rect.h + 11)
             .setPosition(centerX, centerY)
-            .setAlpha(warningPulse)
-            .setTint(MINECART_DANGER_RED)
-            .setTintMode(Phaser.TintModes.FILL);
+            .setAlpha(1);
           movingWall
             .setOrigin(0.5, 0.5)
             .setDisplaySize(width, rect.h + 4)
