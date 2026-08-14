@@ -5,6 +5,11 @@ export interface SpikePointLayout {
 
 export const TERRAIN_SPIKE_POINT_WIDTH = 6;
 
+/** Rotates an upward-authored spike so its tip follows a terrain inward normal. */
+export function spikeRotationForNormal(normalX: number, normalY: number): number {
+  return Math.atan2(normalY, normalX) + Math.PI / 2;
+}
+
 /**
  * Keeps every point the same width while allowing a hazard cluster to contain
  * three, four, or five individual spikes according to its authored footprint.

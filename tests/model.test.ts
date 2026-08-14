@@ -4,7 +4,7 @@ import { CHUNKS, TRANSITION_CHUNKS, envelopesCompatible, tunnelOffsetAt, validat
 import { GameModel } from "../src/game/model";
 import { canTraverseChunk } from "../src/game/solver";
 import { CAMERA_DEAD_ZONE_BOTTOM, CAMERA_DEAD_ZONE_TOP, cameraTargetY, trackCameraY } from "../src/game/camera";
-import { spikeClusterLayout, TERRAIN_SPIKE_POINT_WIDTH } from "../src/game/hazards";
+import { spikeClusterLayout, spikeRotationForNormal, TERRAIN_SPIKE_POINT_WIDTH } from "../src/game/hazards";
 import { PROP_ART, propLayout } from "../src/game/props";
 import { verdantParallaxState } from "../src/game/parallax";
 import type { ActiveChunk, ChunkDefinition } from "../src/game/types";
@@ -333,6 +333,12 @@ describe("birdddddd model", () => {
     expect(fourPoints).toHaveLength(4);
     expect(fivePoints).toHaveLength(5);
     expect([...threePoints, ...fourPoints, ...fivePoints].every((point) => point.width === TERRAIN_SPIKE_POINT_WIDTH)).toBe(true);
+  });
+
+  it("rotates authored spike sprites along floor, ceiling, and slope normals", () => {
+    expect(spikeRotationForNormal(0, -1)).toBeCloseTo(0, 6);
+    expect(spikeRotationForNormal(0, 1)).toBeCloseTo(Math.PI, 6);
+    expect(spikeRotationForNormal(Math.SQRT1_2, -Math.SQRT1_2)).toBeCloseTo(Math.PI / 4, 6);
   });
 
   it("preserves prop aspect ratios and anchors measured visible bottoms", () => {
