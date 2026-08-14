@@ -160,8 +160,8 @@ describe("birdddddd model", () => {
     }
   });
 
-  it("maps every remaining biome hazard to an explicit authored asset", () => {
-    for (let chapter = 3; chapter < CHAPTERS.length; chapter += 1) {
+  it("maps every authored hazard in every biome to an explicit raster asset", () => {
+    for (let chapter = 0; chapter < CHAPTERS.length; chapter += 1) {
       expect(INTERACTIVE_ART[chapter], `chapter ${chapter} needs an interactive art family`).toBeDefined();
       const kinds = new Set(CHUNKS.filter((chunk) => chunk.chapter === chapter).flatMap((chunk) => chunk.hazards.map((hazard) => hazard.kind)));
       for (const kind of kinds) {

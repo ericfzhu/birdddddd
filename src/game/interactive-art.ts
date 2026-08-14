@@ -44,8 +44,8 @@ export const INTERACTIVE_ART: readonly InteractiveArtFamily[] = [
   { slug: "underground-jungle", assets: [...common, "vine"], hazards: { thorns: "thorn", barbs: "barb", vine: "vine" } },
   {
     slug: "desert",
-    assets: [...common, "sandjet", "sandjet-nozzle"],
-    hazards: { thorns: "thorn", barbs: "barb", sandJet: "sandjet" },
+    assets: [...common, "sandjet", "sandjet-nozzle", "spinner"],
+    hazards: { thorns: "thorn", barbs: "barb", sandJet: "sandjet", spinner: "spinner" },
   },
   { slug: "marble-cave", assets: [...common, "crusher"], hazards: { thorns: "thorn", barbs: "barb", crusher: "crusher" } },
   { slug: "violet", assets: [...common, "crystal", "shutter"], hazards: { thorns: "thorn", barbs: "barb", crystal: "crystal", shutter: "shutter" } },
