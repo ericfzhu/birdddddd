@@ -21,6 +21,12 @@ export interface InteractiveArtFamily {
   slug: string;
   assets: readonly InteractiveAssetKind[];
   hazards: Partial<Record<HazardKind, InteractiveAssetKind>>;
+  emphasis?: {
+    spikeWidthBonus?: number;
+    pillarWidthBonus?: number;
+    shutterWidthBonus?: number;
+    shutterWarning?: boolean;
+  };
 }
 
 export interface TransitionArt {
@@ -38,7 +44,12 @@ export const INTERACTIVE_ART: readonly InteractiveArtFamily[] = [
   { slug: "marble-cave", assets: [...common, "crusher"], hazards: { thorns: "thorn", barbs: "barb", crusher: "crusher" } },
   { slug: "violet", assets: [...common, "crystal", "shutter"], hazards: { thorns: "thorn", barbs: "barb", crystal: "crystal", shutter: "shutter" } },
   { slug: "underground-corruption", assets: [...common, "spore", "shutter"], hazards: { thorns: "thorn", barbs: "barb", spore: "spore", shutter: "shutter" } },
-  { slug: "abandoned-minecart", assets: [...common, "cart", "spinner", "shutter"], hazards: { thorns: "thorn", barbs: "barb", cart: "cart", spinner: "spinner", shutter: "shutter" } },
+  {
+    slug: "abandoned-minecart",
+    assets: [...common, "cart", "spinner", "shutter"],
+    hazards: { thorns: "thorn", barbs: "barb", cart: "cart", spinner: "spinner", shutter: "shutter" },
+    emphasis: { spikeWidthBonus: 4, pillarWidthBonus: 4, shutterWidthBonus: 4, shutterWarning: true },
+  },
   { slug: "ashen", assets: [...common, "ember", "beak", "spinner", "shutter"], hazards: { thorns: "thorn", barbs: "barb", ember: "ember", beak: "beak", spinner: "spinner", shutter: "shutter" } },
   { slug: "underworld", assets: [...common, "flame", "flame-warning", "spinner", "shutter"], hazards: { thorns: "thorn", barbs: "barb", flame: "flame", spinner: "spinner", shutter: "shutter" } },
 ] as const;

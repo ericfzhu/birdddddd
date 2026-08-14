@@ -154,6 +154,21 @@ describe("birdddddd model", () => {
     }
   });
 
+  it("gives Minecart's narrow machinery stronger visual emphasis without changing collision data", () => {
+    const minecartArt = INTERACTIVE_ART[6];
+    expect(minecartArt?.emphasis).toMatchObject({
+      spikeWidthBonus: 4,
+      pillarWidthBonus: 4,
+      shutterWidthBonus: 4,
+      shutterWarning: true,
+    });
+    const lift = CHUNKS.find((chunk) => chunk.id === "minecart-lift");
+    expect(lift?.hazards.filter((hazard) => hazard.kind === "shutter").map(({ w, h }) => ({ w, h }))).toEqual([
+      { w: 10, h: 56 },
+      { w: 10, h: 56 },
+    ]);
+  });
+
   it("provides authored dressing for every remaining chapter passage", () => {
     const remaining = TRANSITION_CHUNKS.filter((chunk) => (chunk.transition?.from ?? -1) >= 2);
     expect(TRANSITION_ART).toHaveLength(remaining.length);

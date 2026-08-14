@@ -797,7 +797,7 @@ export class AviaryScene extends Phaser.Scene {
         if (rect.detail === "cage") {
           sprite = takeSprite(`${texturePrefix}-pillar`)
             ?.setOrigin(0.5, 0.5)
-            .setDisplaySize(rect.w + 2, rect.h)
+            .setDisplaySize(rect.w + 2 + (family.emphasis?.pillarWidthBonus ?? 0), rect.h)
             .setPosition(Math.round(rect.x + rect.w / 2), Math.round(rect.y + rect.h / 2));
         } else {
           sprite = takeSprite(`${texturePrefix}-platform`)
@@ -826,7 +826,7 @@ export class AviaryScene extends Phaser.Scene {
           }
           warningEdge
             .setOrigin(0.5, 1)
-            .setDisplaySize(point.width + 4, rect.h + 4)
+            .setDisplaySize(point.width + 4 + (family.emphasis?.spikeWidthBonus ?? 0), rect.h + 4)
             .setPosition(Math.round(centerX), Math.round(surfaceY))
             .setRotation(rotation)
             .setAlpha(0.42)
@@ -834,7 +834,7 @@ export class AviaryScene extends Phaser.Scene {
             .setTintMode(Phaser.TintModes.FILL);
           spike
             .setOrigin(0.5, 1)
-            .setDisplaySize(point.width + 2, rect.h + 2)
+            .setDisplaySize(point.width + 2 + (family.emphasis?.spikeWidthBonus ?? 0), rect.h + 2)
             .setPosition(Math.round(centerX), Math.round(surfaceY))
             .setRotation(rotation);
         }
@@ -862,7 +862,28 @@ export class AviaryScene extends Phaser.Scene {
           .setPosition(centerX, Math.round(ceiling ? rect.y : rect.y + rect.h))
           .setFlipY(ceiling);
       } else if (rect.kind === "shutter") {
-        sprite.setOrigin(0.5, 0.5).setDisplaySize(rect.w + 6, rect.h + 4).setPosition(centerX, centerY);
+        const width = rect.w + 6 + (family.emphasis?.shutterWidthBonus ?? 0);
+        if (family.emphasis?.shutterWarning) {
+          const movingWall = takeSprite(texture);
+          if (!movingWall) {
+            sprite.setVisible(false);
+            continue;
+          }
+          const warningPulse = this.settings.reducedMotion ? 0.42 : 0.36 + (Math.sin(this.uiTime * 8) + 1) * 0.09;
+          sprite
+            .setOrigin(0.5, 0.5)
+            .setDisplaySize(width + 5, rect.h + 9)
+            .setPosition(centerX, centerY)
+            .setAlpha(warningPulse)
+            .setTint(COLORS.coral)
+            .setTintMode(Phaser.TintModes.FILL);
+          movingWall
+            .setOrigin(0.5, 0.5)
+            .setDisplaySize(width, rect.h + 4)
+            .setPosition(centerX, centerY);
+        } else {
+          sprite.setOrigin(0.5, 0.5).setDisplaySize(width, rect.h + 4).setPosition(centerX, centerY);
+        }
       } else if (rect.kind === "beak") {
         sprite.setOrigin(0.5, 0.5).setDisplaySize(rect.w + 4, rect.h + 3).setPosition(centerX, centerY).setFlipY(rect.flipY === true);
       } else {
