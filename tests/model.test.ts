@@ -1,5 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { BIOMES, CHAPTERS, FIXED_STEP_SECONDS, FLIP_DEBOUNCE_SECONDS, PLAY_BOTTOM, PLAY_TOP, PLAYER_HEIGHT, PLAYER_MIN_X, PLAYER_X } from "../src/game/constants";
+import {
+  BIOMES,
+  CHAPTERS,
+  FIXED_STEP_SECONDS,
+  FLIP_DEBOUNCE_SECONDS,
+  PLAY_BOTTOM,
+  PLAY_TOP,
+  PLAYER_HEIGHT,
+  PLAYER_MIN_X,
+  PLAYER_RECOVERY_SPEED,
+  PLAYER_X,
+} from "../src/game/constants";
 import { CHUNKS, TRANSITION_CHUNKS, envelopesCompatible, tunnelOffsetAt, validateChunkLibrary } from "../src/game/chunks";
 import { GameModel } from "../src/game/model";
 import { canTraverseChunk } from "../src/game/solver";
@@ -265,7 +276,7 @@ describe("birdddddd model", () => {
     }
   });
 
-  it("makes slope pushback permanent and kills the bird when repeated displacement reaches the screen edge", () => {
+  it("recovers slowly from slope pushback and still dies under continuous displacement", () => {
     const risingTunnel: ChunkDefinition = {
       ...safeChunk(),
       id: "test-rising-tunnel",
@@ -304,7 +315,8 @@ describe("birdddddd model", () => {
     model.playerY = 90;
     model.velocityY = 0;
     model.advance(180);
-    expect(model.playerX).toBeCloseTo(shovedX, 5);
+    expect(model.playerX).toBeGreaterThan(shovedX);
+    expect(model.playerX).toBeLessThan(PLAYER_X);
 
     const trapped = new GameModel(83);
     trapped.chunks = [activate(risingTunnel, 20)];
@@ -314,7 +326,7 @@ describe("birdddddd model", () => {
     expect(trapped.playerX).toBeLessThanOrEqual(PLAYER_MIN_X + 0.5);
   });
 
-  it("pushes the bird permanently when a safe cage pillar catches it from the side", () => {
+  it("recovers slowly after a safe cage pillar releases the bird", () => {
     const pillarChunk: ChunkDefinition = {
       ...safeChunk(),
       id: "test-safe-pillar",
@@ -334,7 +346,25 @@ describe("birdddddd model", () => {
     model.velocityY = 0;
     model.advance(300);
     expect(model.mode).toBe("playing");
-    expect(model.playerX).toBeCloseTo(shovedX, 5);
+    expect(model.playerX).toBeGreaterThan(shovedX);
+    expect(model.playerX).toBeLessThan(PLAYER_X);
+  });
+
+  it("recovers at a fixed slow rate and stops exactly at the resting position", () => {
+    const model = new GameModel(851);
+    model.chunks = [activate(safeChunk())];
+    model.mode = "playing";
+    model.playerX = 50;
+    model.playerY = 90;
+
+    model.advance(1000);
+    expect(model.playerX).toBeCloseTo(50 + PLAYER_RECOVERY_SPEED, 5);
+    expect(JSON.parse(model.textSnapshot()).player.recovering).toBe(true);
+
+    model.playerX = PLAYER_X - 2;
+    model.advance(1000);
+    expect(model.playerX).toBe(PLAYER_X);
+    expect(model.recovering).toBe(false);
   });
 
   it("lets the bird pass horizontal platform edges without pushback while retaining landings", () => {

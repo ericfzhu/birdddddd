@@ -9,6 +9,7 @@ import {
   PLAY_TOP,
   PLAYER_HEIGHT,
   PLAYER_MIN_X,
+  PLAYER_RECOVERY_SPEED,
   PLAYER_WIDTH,
   PLAYER_X,
   RESTART_DELAY_SECONDS,
@@ -51,6 +52,7 @@ export class GameModel {
   lastFlipAt = -Infinity;
   seed: number;
   reducedMotion = false;
+  recovering = false;
   chunks: ActiveChunk[] = [];
   private rngState: number;
   private events: GameEvent[] = [];
@@ -81,6 +83,7 @@ export class GameModel {
     this.simTime = 0;
     this.deathTimer = 0;
     this.lastFlipAt = -Infinity;
+    this.recovering = false;
     this.seed = nextSeed;
     this.rngState = nextSeed;
     this.events = [];
@@ -123,6 +126,7 @@ export class GameModel {
     }
 
     this.simTime += dt;
+    this.recovering = false;
     const previousX = this.playerX;
     const previousY = this.playerY;
     const previousDistance = this.distance;
@@ -135,10 +139,11 @@ export class GameModel {
     );
     this.playerY += this.velocityY * dt;
 
-    this.resolveTunnel(previousX, previousY, previousDistance);
+    const tunnelPushed = this.resolveTunnel(previousX, previousY, previousDistance);
     if (this.mode !== "playing") return;
-    this.resolveSolids(previousY);
+    const solidPushed = this.resolveSolids(previousY);
     if (this.mode !== "playing") return;
+    if (!tunnelPushed && !solidPushed) this.recoverPlayerX(dt);
     this.processHazards();
     if (this.mode !== "playing") return;
     this.processFeathers();
@@ -278,6 +283,7 @@ export class GameModel {
         vy: Number(this.velocityY.toFixed(2)),
         gravity: this.gravity,
         pushback: Number((PLAYER_X - this.playerX).toFixed(2)),
+        recovering: this.recovering,
       },
       animation: this.animationState(),
       score: this.score,
@@ -303,7 +309,7 @@ export class GameModel {
     });
   }
 
-  private resolveTunnel(previousX: number, previousY: number, previousDistance: number): void {
+  private resolveTunnel(previousX: number, previousY: number, previousDistance: number): boolean {
     const halfHeight = PLAYER_HEIGHT / 2;
     const previousBounds = this.tunnelBoundsAtWorldX(previousDistance + previousX);
     const bounds = this.tunnelBoundsAtWorldX(this.distance + this.playerX);
@@ -339,7 +345,11 @@ export class GameModel {
       }
     }
 
-    if (pushed) this.pushBackToClearance(previousY);
+    if (pushed) {
+      this.pushBackToClearance(previousY);
+      return true;
+    }
+    return false;
   }
 
   private pushBackToClearance(previousY: number): void {
@@ -368,9 +378,10 @@ export class GameModel {
     return { ceiling: PLAY_TOP + offset, floor: PLAY_BOTTOM + offset, offset: Number(offset.toFixed(2)) };
   }
 
-  private resolveSolids(previousY: number): void {
+  private resolveSolids(previousY: number): boolean {
     const halfWidth = PLAYER_WIDTH / 2 - HITBOX_INSET;
     const halfHeight = PLAYER_HEIGHT / 2 - HITBOX_INSET;
+    let pushed = false;
     for (const active of this.chunks) {
       const origin = active.startX - this.distance;
       for (const solid of active.definition.solids) {
@@ -405,13 +416,45 @@ export class GameModel {
         const overlapsVertically = this.playerY + halfHeight > solidY && this.playerY - halfHeight < solidY + solid.h;
         if (!overlapsHorizontally || !overlapsVertically) continue;
         this.playerX = Math.min(this.playerX, left - halfWidth);
+        pushed = true;
         if (this.playerX <= PLAYER_MIN_X + 0.5) {
           this.playerX = Math.max(PLAYER_MIN_X, this.playerX);
           this.die();
-          return;
+          return true;
         }
       }
     }
+    return pushed;
+  }
+
+  private recoverPlayerX(dt: number): void {
+    if (this.playerX >= PLAYER_X) return;
+    const candidate = Math.min(PLAYER_X, this.playerX + PLAYER_RECOVERY_SPEED * dt);
+    if (!this.canOccupyHorizontalPosition(candidate)) return;
+    this.playerX = candidate;
+    this.recovering = true;
+  }
+
+  private canOccupyHorizontalPosition(candidateX: number): boolean {
+    const tunnelHalfHeight = PLAYER_HEIGHT / 2;
+    const bounds = this.tunnelBoundsAtWorldX(this.distance + candidateX);
+    if (this.playerY - tunnelHalfHeight < bounds.ceiling - 0.75) return false;
+    if (this.playerY + tunnelHalfHeight > bounds.floor + 0.75) return false;
+
+    const halfWidth = PLAYER_WIDTH / 2 - HITBOX_INSET;
+    const halfHeight = PLAYER_HEIGHT / 2 - HITBOX_INSET;
+    for (const active of this.chunks) {
+      const origin = active.startX - this.distance;
+      for (const solid of active.definition.solids) {
+        if (solid.detail === "perch") continue;
+        const left = origin + solid.x;
+        const solidY = solid.y + tunnelOffsetAt(active.definition, solid.x + solid.w / 2);
+        const overlapsHorizontally = candidateX + halfWidth > left && candidateX - halfWidth < left + solid.w;
+        const overlapsVertically = this.playerY + halfHeight > solidY && this.playerY - halfHeight < solidY + solid.h;
+        if (overlapsHorizontally && overlapsVertically) return false;
+      }
+    }
+    return true;
   }
 
   private processHazards(): void {
@@ -578,6 +621,7 @@ export class GameModel {
   private die(): void {
     if (this.mode !== "playing") return;
     this.mode = "dead";
+    this.recovering = false;
     this.deathTimer = 0;
     this.bestScore = Math.max(this.bestScore, this.score);
     this.events.push({ type: "death", score: this.score });
