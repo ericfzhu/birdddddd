@@ -5,7 +5,7 @@ import { GameModel } from "../src/game/model";
 import { canTraverseChunk } from "../src/game/solver";
 import { CAMERA_DEAD_ZONE_BOTTOM, CAMERA_DEAD_ZONE_TOP, cameraTargetY, trackCameraY } from "../src/game/camera";
 import { spikeClusterLayout, spikeRotationForNormal, TERRAIN_SPIKE_POINT_WIDTH } from "../src/game/hazards";
-import { PROP_ART, propLayout } from "../src/game/props";
+import { PROP_ART, propGroundPlacement, propLayout } from "../src/game/props";
 import { verdantParallaxState } from "../src/game/parallax";
 import type { ActiveChunk, ChunkDefinition } from "../src/game/types";
 
@@ -362,6 +362,26 @@ describe("birdddddd model", () => {
 
     const corruption = propLayout(5);
     expect(corruption.originY).toBeCloseTo(117 / 128, 5);
+  });
+
+  it("aligns wide foreground props to slopes without burying the uphill side", () => {
+    const layout = propLayout(6);
+    const slope = 0.35;
+    const placement = propGroundPlacement(layout, (x) => 150 + x * slope);
+    expect(placement).toBeDefined();
+    expect(placement?.rotation).toBeCloseTo(Math.atan(slope), 5);
+    expect(placement?.y).toBeCloseTo(151, 5);
+
+    if (!placement) return;
+    const sine = Math.sin(placement.rotation);
+    const cosine = Math.cos(placement.rotation);
+    for (let index = 0; index <= 8; index += 1) {
+      const localX = layout.visibleLeft + (layout.visibleRight - layout.visibleLeft) * (index / 8);
+      const propBaseY = placement.y + localX * sine;
+      const floorY = 150 + localX * cosine * slope;
+      expect(propBaseY).toBeLessThanOrEqual(floorY + 1.001);
+      expect(propBaseY).toBeGreaterThanOrEqual(floorY + 0.999);
+    }
   });
 
   it("moves Verdant Wilds background layers at increasing depth rates", () => {

@@ -17,7 +17,7 @@ import {
 } from "./constants";
 import { spikeClusterLayout, spikeRotationForNormal } from "./hazards";
 import { verdantParallaxState, type ParallaxCrop } from "./parallax";
-import { propLayout } from "./props";
+import { propGroundPlacement, propLayout } from "./props";
 import { GameModel } from "./model";
 import { HudText } from "./hud";
 import type { GameEvent, VisibleRect, VisibleTunnelPoint } from "./types";
@@ -621,21 +621,16 @@ export class AviaryScene extends Phaser.Scene {
       if (!prop) return;
       const chapter = chunk.definition.chapter;
       const layout = propLayout(chapter);
-      let groundY = -Infinity;
-      const sampleCount = 6;
-      for (let index = 0; index <= sampleCount; index += 1) {
-        const sampleX = x + Phaser.Math.Linear(layout.visibleLeft, layout.visibleRight, index / sampleCount);
-        const sample = this.tunnelPointAt(tunnel, sampleX);
-        if (sample) groundY = Math.max(groundY, sample.floor);
-      }
-      if (!Number.isFinite(groundY)) continue;
+      const placement = propGroundPlacement(layout, (relativeX) => this.tunnelPointAt(tunnel, x + relativeX)?.floor);
+      if (!placement) continue;
       const legacyChapter = LEGACY_ATLAS_CHAPTER.get(chapter);
       if (legacyChapter === undefined) prop.setTexture(`biome-prop-${chapter}`);
       else prop.setTexture("biome-props-atlas", legacyChapter);
       prop
         .setOrigin(0.5, layout.originY)
         .setDisplaySize(layout.displayWidth, layout.displayHeight)
-        .setPosition(Math.round(x), Math.ceil(groundY + 1))
+        .setPosition(Math.round(x), Math.round(placement.y))
+        .setRotation(placement.rotation)
         .setAlpha(0.92)
         .setVisible(true);
     }
@@ -1138,7 +1133,7 @@ export class AviaryScene extends Phaser.Scene {
     const runFrame = Math.floor(motionTime * 12) % 2;
     const running = animation === "run";
     const stunned = animation === "stunned";
-    const flutter = animation === "flutter" ? Math.sin(motionTime * 20) : 0;
+    const flapFrame = animation === "flutter" ? Math.floor(motionTime * 12) % 3 : 1;
     const runBob = running && runFrame === 1 ? -gravity : 0;
     const stunJitter = stunned && !this.settings.reducedMotion ? Math.round(Math.sin(this.model.deathTimer * 85)) : 0;
     const x = this.model.playerX + stunJitter;
@@ -1171,11 +1166,39 @@ export class AviaryScene extends Phaser.Scene {
       g.fillRect(x + 5, eyeY - 1, 2, 2);
     }
 
+    const wingRootX = x;
+    const wingRootY = y + gravity;
+    const wingTipX = stunned ? x - 10 : animation === "flutter" && flapFrame === 1 ? x - 12 : x - 10;
+    const wingTipY = stunned
+      ? y + gravity * 7
+      : animation === "flutter"
+        ? y + gravity * (flapFrame === 0 ? -7 : flapFrame === 1 ? -1 : 7)
+        : y + gravity * 4;
+    const wingShoulderY = y - gravity * 3;
+
+    // A dark outer silhouette keeps the wing readable over every biome. The
+    // three flutter poses describe a broad arc instead of merely resizing the
+    // old triangle, so even a single frame clearly reads as a flapping wing.
+    g.fillStyle(0x3b2630, 0.9);
+    g.fillTriangle(wingRootX + 2, wingRootY - gravity * 3, wingTipX - 1, wingTipY, wingRootX, wingRootY + gravity * 3);
+    g.fillTriangle(wingTipX - 1, wingTipY, wingTipX + 4, wingTipY - gravity * 2, wingTipX + 3, wingTipY + gravity * 2);
     g.fillStyle(0xb66f35, 1);
-    const wingY = y + gravity * (stunned ? 3 : 1 + flutter * 2);
-    const wingReach = stunned ? 7 : animation === "flutter" ? (flutter > 0 ? 7 : 4) : 4;
-    g.fillTriangle(x - 4, wingY - 3, x + 1, wingY, x - wingReach, wingY + gravity * 5);
-    if (stunned) g.fillTriangle(x + 3, wingY - 2, x + 7, wingY, x + 5, wingY + gravity * 6);
+    g.fillTriangle(wingRootX + 1, wingRootY - gravity * 2, wingTipX, wingTipY, wingRootX - 1, wingRootY + gravity * 2);
+    g.fillTriangle(wingTipX, wingTipY, wingTipX + 4, wingTipY - gravity, wingTipX + 3, wingTipY + gravity * 2);
+    g.fillStyle(0xe7a746, 1);
+    g.fillTriangle(wingRootX, wingShoulderY, wingTipX + 3, wingTipY, wingRootX + 2, wingRootY + gravity);
+    g.fillStyle(0xf2c25b, 1);
+    g.fillRect(Math.round(wingTipX + 1), Math.round(wingTipY - gravity * 2), 5, 1);
+    g.fillRect(Math.round(wingTipX), Math.round(wingTipY), 5, 1);
+    g.fillStyle(COLORS.cream, 0.82);
+    g.fillRect(Math.round(wingTipX + 2), Math.round(wingTipY - gravity * 3), 3, 1);
+
+    if (stunned) {
+      g.fillStyle(0x3b2630, 0.9);
+      g.fillTriangle(x + 2, wingRootY, x + 8, y + gravity * 6, x + 7, wingRootY - gravity * 2);
+      g.fillStyle(0xb66f35, 1);
+      g.fillTriangle(x + 3, wingRootY, x + 7, y + gravity * 5, x + 6, wingRootY - gravity);
+    }
 
     g.fillStyle(0xd9793d, 1);
     g.fillTriangle(x + 8, y - 2, x + 12, y + (stunned ? 2 : 0), x + 8, y + 2);
