@@ -1,4 +1,4 @@
-import { VIEW_HEIGHT, VIEW_WIDTH } from "./game/constants";
+import { RENDER_DENSITY, VIEW_HEIGHT, VIEW_WIDTH } from "./game/constants";
 import { shouldGateForPortrait, type MobileViewportSignals } from "./mobile";
 import "./styles.css";
 
@@ -59,8 +59,8 @@ function startGame(): Promise<void> {
       const config: Phaser.Types.Core.GameConfig = {
         type: Phaser.CANVAS,
         parent: "game",
-        width: VIEW_WIDTH,
-        height: VIEW_HEIGHT,
+        width: VIEW_WIDTH * RENDER_DENSITY,
+        height: VIEW_HEIGHT * RENDER_DENSITY,
         backgroundColor: "#211a1d",
         pixelArt: true,
         roundPixels: true,
@@ -74,8 +74,8 @@ function startGame(): Promise<void> {
         scale: {
           mode: Phaser.Scale.FIT,
           autoCenter: Phaser.Scale.CENTER_BOTH,
-          width: VIEW_WIDTH,
-          height: VIEW_HEIGHT,
+          width: VIEW_WIDTH * RENDER_DENSITY,
+          height: VIEW_HEIGHT * RENDER_DENSITY,
         },
         audio: {
           disableWebAudio: false,

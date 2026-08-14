@@ -11,6 +11,7 @@ import {
   PLAYER_HEIGHT,
   PLAYER_WIDTH,
   PLAYER_X,
+  RENDER_DENSITY,
   VIEW_HEIGHT,
   VIEW_WIDTH,
 } from "./constants";
@@ -119,6 +120,7 @@ export class AviaryScene extends Phaser.Scene {
   }
 
   create(): void {
+    this.cameras.main.setOrigin(0, 0).setZoom(RENDER_DENSITY).setRoundPixels(true);
     this.settings = this.loadSettings();
     const query = new URLSearchParams(window.location.search);
     const requestedSeed = Number(query.get("seed"));
