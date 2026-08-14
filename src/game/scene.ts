@@ -106,6 +106,7 @@ export class AviaryScene extends Phaser.Scene {
         this.load.image(`authored-terrain-${chapter}-${kind}`, `/assets/biome-${slug}-${kind}-v2-runtime.png`);
       }
     });
+    this.load.image("authored-terrain-1-vine", "/assets/biome-underground-jungle-vine-v2-runtime.png");
     this.load.spritesheet("biome-props-atlas", "/assets/biome-props-atlas-runtime.png", {
       frameWidth: 128,
       frameHeight: 128,
@@ -762,6 +763,13 @@ export class AviaryScene extends Phaser.Scene {
     for (const rect of rects) {
       if (rect.chapter < 0 || rect.chapter >= AUTHORED_INTERACTIVE_TERRAIN.length) continue;
       const texturePrefix = `authored-terrain-${rect.chapter}`;
+      if (rect.chapter === 1 && rect.kind === "vine") {
+        takeSprite("authored-terrain-1-vine")
+          ?.setOrigin(0.5, 0)
+          .setDisplaySize(rect.w + 6, rect.h + 2)
+          .setPosition(Math.round(rect.x + rect.w / 2), Math.round(rect.y));
+        continue;
+      }
       if (rect.kind === "solid") {
         if (rect.detail === "cage") {
           takeSprite(`${texturePrefix}-pillar`)
@@ -870,6 +878,7 @@ export class AviaryScene extends Phaser.Scene {
   private drawRectEntity(g: Phaser.GameObjects.Graphics, rect: VisibleRect): void {
     if (rect.chapter >= 0 && rect.chapter < AUTHORED_INTERACTIVE_TERRAIN.length
       && (rect.kind === "solid" || rect.kind === "thorns" || rect.kind === "barbs")) return;
+    if (rect.chapter === 1 && rect.kind === "vine") return;
     if (rect.kind === "solid") {
       if (rect.detail === "cage") {
         this.drawCagePillar(g, rect);
