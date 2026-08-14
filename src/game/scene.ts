@@ -48,6 +48,7 @@ interface StoredSettings {
 
 const STORAGE_KEY = "birdddddd:v1";
 const LEGACY_STORAGE_KEY = "impossible-aviary:v1";
+const MINECART_DANGER_RED = 0xff1238;
 const BACKGROUND_ASSETS = [
   "biome-forest-far-background-v2-runtime.png",
   "biome-underground-jungle-background-runtime.png",
@@ -894,13 +895,13 @@ export class AviaryScene extends Phaser.Scene {
             sprite.setVisible(false);
             continue;
           }
-          const warningPulse = this.settings.reducedMotion ? 0.42 : 0.36 + (Math.sin(this.uiTime * 8) + 1) * 0.09;
+          const warningPulse = this.settings.reducedMotion ? 0.48 : 0.36 + (Math.sin(this.uiTime * 8) + 1) * 0.11;
           sprite
             .setOrigin(0.5, 0.5)
-            .setDisplaySize(width + 5, rect.h + 9)
+            .setDisplaySize(width + 7, rect.h + 11)
             .setPosition(centerX, centerY)
             .setAlpha(warningPulse)
-            .setTint(COLORS.coral)
+            .setTint(MINECART_DANGER_RED)
             .setTintMode(Phaser.TintModes.FILL);
           movingWall
             .setOrigin(0.5, 0.5)
@@ -1226,6 +1227,7 @@ export class AviaryScene extends Phaser.Scene {
       g.strokeCircle(centerX, centerY, radius + 2);
     }
   }
+
 
   private drawFeather(g: Phaser.GameObjects.Graphics, x: number, y: number, scale: number): void {
     const bob = Math.sin(this.uiTime * 5 + x * 0.04) * 2;
