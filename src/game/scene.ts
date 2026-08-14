@@ -53,6 +53,7 @@ const BACKGROUND_ASSETS = [
 const NEW_ART_CHAPTERS = [1, 3, 5, 6, 8] as const;
 const NEW_ART_SLUGS = ["underground-jungle", "marble-cave", "underground-corruption", "abandoned-minecart", "underworld"] as const;
 const LEGACY_ATLAS_CHAPTER = new Map<number, number>([[0, 0], [2, 1], [4, 2], [7, 3]]);
+const AUTHORED_INTERACTIVE_TERRAIN = ["forest", "underground-jungle", "desert"] as const;
 
 export class AviaryScene extends Phaser.Scene {
   model!: GameModel;
@@ -66,8 +67,8 @@ export class AviaryScene extends Phaser.Scene {
   private terrainTilePool: Phaser.GameObjects.Image[] = [];
   private propLayer!: Phaser.GameObjects.Container;
   private propPool: Phaser.GameObjects.Image[] = [];
-  private verdantTerrainLayer!: Phaser.GameObjects.Container;
-  private verdantTerrainPool: Phaser.GameObjects.Image[] = [];
+  private authoredTerrainLayer!: Phaser.GameObjects.Container;
+  private authoredTerrainPool: Phaser.GameObjects.Image[] = [];
   private world!: Phaser.GameObjects.Graphics;
   private effects!: Phaser.GameObjects.Graphics;
   private ui!: Phaser.GameObjects.Graphics;
@@ -100,10 +101,11 @@ export class AviaryScene extends Phaser.Scene {
     BACKGROUND_ASSETS.forEach((asset, chapter) => this.load.image(`biome-background-${chapter}`, `/assets/${asset}`));
     this.load.image("verdant-midground", "/assets/biome-forest-midground-v2-runtime.png");
     this.load.image("verdant-near", "/assets/biome-forest-near-v2-runtime.png");
-    this.load.image("verdant-platform", "/assets/biome-forest-platform-v2-runtime.png");
-    this.load.image("verdant-pillar", "/assets/biome-forest-pillar-v2-runtime.png");
-    this.load.image("verdant-thorn", "/assets/biome-forest-thorn-v2-runtime.png");
-    this.load.image("verdant-barb", "/assets/biome-forest-barb-v2-runtime.png");
+    AUTHORED_INTERACTIVE_TERRAIN.forEach((slug, chapter) => {
+      for (const kind of ["platform", "pillar", "thorn", "barb"] as const) {
+        this.load.image(`authored-terrain-${chapter}-${kind}`, `/assets/biome-${slug}-${kind}-v2-runtime.png`);
+      }
+    });
     this.load.spritesheet("biome-props-atlas", "/assets/biome-props-atlas-runtime.png", {
       frameWidth: 128,
       frameHeight: 128,
@@ -150,11 +152,11 @@ export class AviaryScene extends Phaser.Scene {
       this.propLayer.add(prop);
       this.propPool.push(prop);
     }
-    this.verdantTerrainLayer = this.add.container();
-    for (let index = 0; index < 80; index += 1) {
-      const sprite = this.add.image(0, 0, "verdant-thorn").setVisible(false);
-      this.verdantTerrainLayer.add(sprite);
-      this.verdantTerrainPool.push(sprite);
+    this.authoredTerrainLayer = this.add.container();
+    for (let index = 0; index < 128; index += 1) {
+      const sprite = this.add.image(0, 0, "authored-terrain-0-thorn").setVisible(false);
+      this.authoredTerrainLayer.add(sprite);
+      this.authoredTerrainPool.push(sprite);
     }
     this.world = this.add.graphics();
     this.effects = this.add.graphics();
@@ -432,7 +434,7 @@ export class AviaryScene extends Phaser.Scene {
     base.setPosition(renderX, renderY);
     this.terrainTiles.setPosition(renderX, renderY);
     this.propLayer.setPosition(renderX, renderY);
-    this.verdantTerrainLayer.setPosition(renderX, renderY);
+    this.authoredTerrainLayer.setPosition(renderX, renderY);
     g.setPosition(renderX, renderY);
 
     const transition = this.model.chapterTransition();
@@ -449,7 +451,7 @@ export class AviaryScene extends Phaser.Scene {
     this.drawTransitionPassages(g);
     this.drawChunkGates(g, tunnel);
     const visibleRects = this.model.visibleRects();
-    this.renderVerdantTerrainSprites(visibleRects);
+    this.renderAuthoredTerrainSprites(visibleRects);
     for (const rect of visibleRects) this.drawRectEntity(g, rect);
     for (const feather of this.model.visibleFeathers()) {
       if (!feather.collected) this.drawFeather(g, feather.x, feather.y, 1);
@@ -740,11 +742,11 @@ export class AviaryScene extends Phaser.Scene {
     for (let y = rect.y + 4; y < rect.y + rect.h - 1; y += 9) g.fillRect(rect.x, y, rect.w, 2);
   }
 
-  private renderVerdantTerrainSprites(rects: VisibleRect[]): void {
-    for (const sprite of this.verdantTerrainPool) sprite.setVisible(false);
+  private renderAuthoredTerrainSprites(rects: VisibleRect[]): void {
+    for (const sprite of this.authoredTerrainPool) sprite.setVisible(false);
     let poolIndex = 0;
     const takeSprite = (texture: string): Phaser.GameObjects.Image | undefined => {
-      const sprite = this.verdantTerrainPool[poolIndex++];
+      const sprite = this.authoredTerrainPool[poolIndex++];
       if (!sprite) return undefined;
       return sprite
         .setTexture(texture)
@@ -758,15 +760,16 @@ export class AviaryScene extends Phaser.Scene {
     };
 
     for (const rect of rects) {
-      if (rect.chapter !== 0) continue;
+      if (rect.chapter < 0 || rect.chapter >= AUTHORED_INTERACTIVE_TERRAIN.length) continue;
+      const texturePrefix = `authored-terrain-${rect.chapter}`;
       if (rect.kind === "solid") {
         if (rect.detail === "cage") {
-          takeSprite("verdant-pillar")
+          takeSprite(`${texturePrefix}-pillar`)
             ?.setOrigin(0.5, 0.5)
             .setDisplaySize(rect.w + 2, rect.h)
             .setPosition(Math.round(rect.x + rect.w / 2), Math.round(rect.y + rect.h / 2));
         } else {
-          takeSprite("verdant-platform")
+          takeSprite(`${texturePrefix}-platform`)
             ?.setOrigin(0.5, 0.5)
             .setDisplaySize(rect.w, rect.h + 2)
             .setPosition(Math.round(rect.x + rect.w / 2), Math.round(rect.y + rect.h / 2));
@@ -779,7 +782,7 @@ export class AviaryScene extends Phaser.Scene {
         const centerX = rect.x + point.offset + point.width / 2;
         const surfaceY = this.terrainSurfaceYAt(centerX, ceiling);
         const normal = this.terrainInwardNormalAt(centerX, ceiling);
-        const texture = rect.kind === "barbs" ? "verdant-barb" : "verdant-thorn";
+        const texture = `${texturePrefix}-${rect.kind === "barbs" ? "barb" : "thorn"}`;
         const rotation = spikeRotationForNormal(normal.x, normal.y);
         const warningEdge = takeSprite(texture);
         if (warningEdge) {
@@ -865,7 +868,8 @@ export class AviaryScene extends Phaser.Scene {
   }
 
   private drawRectEntity(g: Phaser.GameObjects.Graphics, rect: VisibleRect): void {
-    if (rect.chapter === 0 && (rect.kind === "solid" || rect.kind === "thorns" || rect.kind === "barbs")) return;
+    if (rect.chapter >= 0 && rect.chapter < AUTHORED_INTERACTIVE_TERRAIN.length
+      && (rect.kind === "solid" || rect.kind === "thorns" || rect.kind === "barbs")) return;
     if (rect.kind === "solid") {
       if (rect.detail === "cage") {
         this.drawCagePillar(g, rect);
