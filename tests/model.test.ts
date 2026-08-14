@@ -7,7 +7,13 @@ import { CAMERA_DEAD_ZONE_BOTTOM, CAMERA_DEAD_ZONE_TOP, cameraTargetY, trackCame
 import { spikeClusterLayout, spikeRotationForNormal, TERRAIN_SPIKE_POINT_WIDTH } from "../src/game/hazards";
 import { PROP_ART, propGroundPlacement, propLayout } from "../src/game/props";
 import { verdantParallaxState } from "../src/game/parallax";
-import { authoredAssetForHazard, INTERACTIVE_ART, TRANSITION_ART, transitionArtFor } from "../src/game/interactive-art";
+import {
+  authoredAssetForHazard,
+  interactiveDangerTextureKey,
+  INTERACTIVE_ART,
+  TRANSITION_ART,
+  transitionArtFor,
+} from "../src/game/interactive-art";
 import type { ActiveChunk, ChunkDefinition } from "../src/game/types";
 
 const safeChunk = (feathers: Array<{ x: number; y: number }> = []): ChunkDefinition => ({
@@ -154,13 +160,26 @@ describe("birdddddd model", () => {
     }
   });
 
+  it("provides a distinct generated danger silhouette key for every authored lethal asset", () => {
+    const keys = new Set<string>();
+    INTERACTIVE_ART.forEach((family, chapter) => {
+      for (const asset of new Set(Object.values(family.hazards))) {
+        if (!asset) continue;
+        const key = interactiveDangerTextureKey(chapter, asset);
+        expect(key).toBe(`authored-terrain-${chapter}-${asset}-danger`);
+        expect(keys.has(key)).toBe(false);
+        keys.add(key);
+      }
+    });
+    expect(keys.size).toBeGreaterThan(20);
+  });
+
   it("gives Minecart's narrow machinery stronger visual emphasis without changing collision data", () => {
     const minecartArt = INTERACTIVE_ART[6];
     expect(minecartArt?.emphasis).toMatchObject({
       spikeWidthBonus: 4,
       pillarWidthBonus: 8,
       shutterWidthBonus: 4,
-      shutterWarning: true,
       clusteredThorns: true,
     });
     const lift = CHUNKS.find((chunk) => chunk.id === "minecart-lift");

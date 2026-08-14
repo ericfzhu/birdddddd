@@ -21,6 +21,7 @@ import { propGroundPlacement, propLayout } from "./props";
 import {
   authoredAssetForHazard,
   interactiveAssetPath,
+  interactiveDangerTextureKey,
   interactiveTextureKey,
   INTERACTIVE_ART,
   TRANSITION_ART,
@@ -48,8 +49,7 @@ interface StoredSettings {
 
 const STORAGE_KEY = "birdddddd:v1";
 const LEGACY_STORAGE_KEY = "impossible-aviary:v1";
-const MINECART_DANGER_RED = 0xff1238;
-const MINECART_DANGER_TEXTURE = "authored-terrain-6-shutter-danger";
+const DANGER_RED = 0xff1238;
 const BACKGROUND_ASSETS = [
   "biome-forest-far-background-v2-runtime.png",
   "biome-underground-jungle-background-runtime.png",
@@ -140,11 +140,17 @@ export class AviaryScene extends Phaser.Scene {
 
   create(): void {
     this.cameras.main.setOrigin(0, 0).setZoom(RENDER_DENSITY).setRoundPixels(true);
-    this.createSolidSilhouetteTexture(
-      interactiveTextureKey(6, "shutter"),
-      MINECART_DANGER_TEXTURE,
-      `#${MINECART_DANGER_RED.toString(16).padStart(6, "0")}`,
-    );
+    const dangerColor = `#${DANGER_RED.toString(16).padStart(6, "0")}`;
+    INTERACTIVE_ART.forEach((family, chapter) => {
+      for (const asset of family.assets) {
+        if (!Object.values(family.hazards).includes(asset)) continue;
+        this.createSolidSilhouetteTexture(
+          interactiveTextureKey(chapter, asset),
+          interactiveDangerTextureKey(chapter, asset),
+          dangerColor,
+        );
+      }
+    });
     this.settings = this.loadSettings();
     const query = new URLSearchParams(window.location.search);
     const requestedSeed = Number(query.get("seed"));
@@ -844,13 +850,12 @@ export class AviaryScene extends Phaser.Scene {
           const cluster = takeSprite(`${texturePrefix}-thorn`);
           if (warningEdge && cluster) {
             warningEdge
+              .setTexture(interactiveDangerTextureKey(rect.chapter, "thorn"))
               .setOrigin(0.5, 1)
               .setDisplaySize(rect.w + 11, rect.h + 5)
               .setPosition(Math.round(centerX), Math.round(surfaceY))
               .setRotation(rotation)
-              .setAlpha(0.46)
-              .setTint(COLORS.coral)
-              .setTintMode(Phaser.TintModes.FILL);
+              .setAlpha(1);
             cluster
               .setOrigin(0.5, 1)
               .setDisplaySize(rect.w + 7, rect.h + 2)
@@ -874,13 +879,12 @@ export class AviaryScene extends Phaser.Scene {
             continue;
           }
           warningEdge
+            .setTexture(interactiveDangerTextureKey(rect.chapter, rect.kind === "barbs" ? "barb" : "thorn"))
             .setOrigin(0.5, 1)
             .setDisplaySize(point.width + 4 + (family.emphasis?.spikeWidthBonus ?? 0), rect.h + 4)
             .setPosition(Math.round(centerX), Math.round(surfaceY))
             .setRotation(rotation)
-            .setAlpha(0.42)
-            .setTint(COLORS.coral)
-            .setTintMode(Phaser.TintModes.FILL);
+            .setAlpha(1);
           spike
             .setOrigin(0.5, 1)
             .setDisplaySize(point.width + 2 + (family.emphasis?.spikeWidthBonus ?? 0), rect.h + 2)
@@ -896,8 +900,16 @@ export class AviaryScene extends Phaser.Scene {
       const texture = interactiveTextureKey(rect.chapter, asset);
       const centerX = Math.round(rect.x + rect.w / 2);
       const centerY = Math.round(rect.y + rect.h / 2);
-      const sprite = takeSprite(texture);
-      if (!sprite) continue;
+      const firstSprite = takeSprite(texture);
+      if (!firstSprite) continue;
+      const warningSprite = rect.active === false
+        ? undefined
+        : firstSprite.setTexture(interactiveDangerTextureKey(rect.chapter, asset));
+      const sprite = warningSprite ? takeSprite(texture) : firstSprite;
+      if (!sprite) {
+        warningSprite?.setVisible(false);
+        continue;
+      }
 
       if (rect.kind === "vine") {
         sprite.setOrigin(0.5, 0).setDisplaySize(rect.w + 6, rect.h + 2).setPosition(centerX, Math.round(rect.y));
@@ -912,25 +924,7 @@ export class AviaryScene extends Phaser.Scene {
           .setFlipY(ceiling);
       } else if (rect.kind === "shutter") {
         const width = rect.w + 6 + (family.emphasis?.shutterWidthBonus ?? 0);
-        if (family.emphasis?.shutterWarning) {
-          const movingWall = takeSprite(texture);
-          if (!movingWall) {
-            sprite.setVisible(false);
-            continue;
-          }
-          sprite
-            .setTexture(MINECART_DANGER_TEXTURE)
-            .setOrigin(0.5, 0.5)
-            .setDisplaySize(width + 7, rect.h + 11)
-            .setPosition(centerX, centerY)
-            .setAlpha(1);
-          movingWall
-            .setOrigin(0.5, 0.5)
-            .setDisplaySize(width, rect.h + 4)
-            .setPosition(centerX, centerY);
-        } else {
-          sprite.setOrigin(0.5, 0.5).setDisplaySize(width, rect.h + 4).setPosition(centerX, centerY);
-        }
+        sprite.setOrigin(0.5, 0.5).setDisplaySize(width, rect.h + 4).setPosition(centerX, centerY);
       } else if (rect.kind === "beak") {
         sprite.setOrigin(0.5, 0.5).setDisplaySize(rect.w + 4, rect.h + 3).setPosition(centerX, centerY).setFlipY(rect.flipY === true);
       } else {
@@ -946,8 +940,26 @@ export class AviaryScene extends Phaser.Scene {
           sprite.setScale(sprite.scaleX * pulse, sprite.scaleY * pulse);
         }
       }
+      if (warningSprite) {
+        this.syncDangerSilhouette(warningSprite, sprite, rect.kind === "shutter" ? 7 : 4);
+      }
       this.authoredRects.add(rect);
     }
+  }
+
+  private syncDangerSilhouette(
+    warning: Phaser.GameObjects.Image,
+    sprite: Phaser.GameObjects.Image,
+    padding: number,
+  ): void {
+    warning
+      .setOrigin(sprite.originX, sprite.originY)
+      .setDisplaySize(sprite.displayWidth + padding, sprite.displayHeight + padding)
+      .setPosition(sprite.x, sprite.y)
+      .setRotation(sprite.rotation)
+      .setFlipX(sprite.flipX)
+      .setFlipY(sprite.flipY)
+      .setAlpha(1);
   }
 
   private terrainSurfaceYAt(x: number, ceiling: boolean): number {
@@ -1083,6 +1095,10 @@ export class AviaryScene extends Phaser.Scene {
       const baseY = ceiling ? rect.y : rect.y + rect.h;
       const direction = ceiling ? 1 : -1;
       const nozzleY = baseY - (ceiling ? 0 : 5);
+      if (active && rect.kind === "sandJet") {
+        g.fillStyle(DANGER_RED, 1);
+        g.fillRect(rect.x - 4, nozzleY - 2, rect.w + 8, 9);
+      }
       g.fillStyle(biome.terrainDark, 1);
       g.fillRect(rect.x - 2, nozzleY, rect.w + 4, 5);
       g.fillStyle(biome.surface, 1);
@@ -1096,15 +1112,18 @@ export class AviaryScene extends Phaser.Scene {
         return;
       }
       if (rect.kind === "sandJet") {
+        g.fillStyle(DANGER_RED, 1);
+        for (let distance = 4; distance < rect.h + 2; distance += 5) {
+          const spread = Math.min(6, Math.floor(distance / 10) + 2);
+          const y = baseY + direction * distance;
+          g.fillRect(rect.x + rect.w / 2 - spread, y - 1, spread * 2 + 2, 5);
+        }
         g.fillStyle(biome.accent, 0.92);
         for (let distance = 5; distance < rect.h; distance += 5) {
           const spread = Math.min(4, Math.floor(distance / 10));
           const y = baseY + direction * distance;
           g.fillRect(rect.x + rect.w / 2 - spread, y, spread * 2 + 2, 3);
         }
-        g.lineStyle(1, COLORS.coral, 0.38);
-        g.lineBetween(rect.x + rect.w / 2 - 2, baseY + direction * 4, rect.x + rect.w / 2 - 4, baseY + direction * (rect.h - 3));
-        g.lineBetween(rect.x + rect.w / 2 + 2, baseY + direction * 4, rect.x + rect.w / 2 + 4, baseY + direction * (rect.h - 3));
       } else {
         const tipY = baseY + direction * rect.h;
         g.fillStyle(biome.danger, 1);

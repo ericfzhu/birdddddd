@@ -25,7 +25,6 @@ export interface InteractiveArtFamily {
     spikeWidthBonus?: number;
     pillarWidthBonus?: number;
     shutterWidthBonus?: number;
-    shutterWarning?: boolean;
     clusteredThorns?: boolean;
   };
 }
@@ -53,7 +52,6 @@ export const INTERACTIVE_ART: readonly InteractiveArtFamily[] = [
       spikeWidthBonus: 4,
       pillarWidthBonus: 8,
       shutterWidthBonus: 4,
-      shutterWarning: true,
       clusteredThorns: true,
     },
   },
@@ -72,6 +70,10 @@ export const TRANSITION_ART: readonly TransitionArt[] = [
 
 export function interactiveTextureKey(chapter: number, asset: InteractiveAssetKind): string {
   return `authored-terrain-${chapter}-${asset}`;
+}
+
+export function interactiveDangerTextureKey(chapter: number, asset: InteractiveAssetKind): string {
+  return `${interactiveTextureKey(chapter, asset)}-danger`;
 }
 
 export function interactiveAssetPath(family: InteractiveArtFamily, asset: InteractiveAssetKind): string {
