@@ -158,9 +158,10 @@ describe("birdddddd model", () => {
     const minecartArt = INTERACTIVE_ART[6];
     expect(minecartArt?.emphasis).toMatchObject({
       spikeWidthBonus: 4,
-      pillarWidthBonus: 4,
+      pillarWidthBonus: 8,
       shutterWidthBonus: 4,
       shutterWarning: true,
+      clusteredThorns: true,
     });
     const lift = CHUNKS.find((chunk) => chunk.id === "minecart-lift");
     expect(lift?.hazards.filter((hazard) => hazard.kind === "shutter").map(({ w, h }) => ({ w, h }))).toEqual([

@@ -26,6 +26,7 @@ export interface InteractiveArtFamily {
     pillarWidthBonus?: number;
     shutterWidthBonus?: number;
     shutterWarning?: boolean;
+    clusteredThorns?: boolean;
   };
 }
 
@@ -48,7 +49,7 @@ export const INTERACTIVE_ART: readonly InteractiveArtFamily[] = [
     slug: "abandoned-minecart",
     assets: [...common, "cart", "spinner", "shutter"],
     hazards: { thorns: "thorn", barbs: "barb", cart: "cart", spinner: "spinner", shutter: "shutter" },
-    emphasis: { spikeWidthBonus: 4, pillarWidthBonus: 4, shutterWidthBonus: 4, shutterWarning: true },
+    emphasis: { spikeWidthBonus: 4, pillarWidthBonus: 8, shutterWidthBonus: 4, shutterWarning: true, clusteredThorns: true },
   },
   { slug: "ashen", assets: [...common, "ember", "beak", "spinner", "shutter"], hazards: { thorns: "thorn", barbs: "barb", ember: "ember", beak: "beak", spinner: "spinner", shutter: "shutter" } },
   { slug: "underworld", assets: [...common, "flame", "flame-warning", "spinner", "shutter"], hazards: { thorns: "thorn", barbs: "barb", flame: "flame", spinner: "spinner", shutter: "shutter" } },

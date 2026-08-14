@@ -811,6 +811,31 @@ export class AviaryScene extends Phaser.Scene {
 
       if (rect.kind === "thorns" || rect.kind === "barbs") {
         const ceiling = rect.attachment === "ceiling" || rect.flipY === true;
+        if (rect.kind === "thorns" && family.emphasis?.clusteredThorns) {
+          const centerX = rect.x + rect.w / 2;
+          const surfaceY = this.terrainSurfaceYAt(centerX, ceiling);
+          const normal = this.terrainInwardNormalAt(centerX, ceiling);
+          const rotation = spikeRotationForNormal(normal.x, normal.y);
+          const warningEdge = takeSprite(`${texturePrefix}-thorn`);
+          const cluster = takeSprite(`${texturePrefix}-thorn`);
+          if (warningEdge && cluster) {
+            warningEdge
+              .setOrigin(0.5, 1)
+              .setDisplaySize(rect.w + 11, rect.h + 5)
+              .setPosition(Math.round(centerX), Math.round(surfaceY))
+              .setRotation(rotation)
+              .setAlpha(0.46)
+              .setTint(COLORS.coral)
+              .setTintMode(Phaser.TintModes.FILL);
+            cluster
+              .setOrigin(0.5, 1)
+              .setDisplaySize(rect.w + 7, rect.h + 2)
+              .setPosition(Math.round(centerX), Math.round(surfaceY))
+              .setRotation(rotation);
+            this.authoredRects.add(rect);
+          }
+          continue;
+        }
         let complete = true;
         for (const point of spikeClusterLayout(rect.w)) {
           const centerX = rect.x + point.offset + point.width / 2;
