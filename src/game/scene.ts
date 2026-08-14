@@ -15,6 +15,7 @@ import {
   VIEW_WIDTH,
 } from "./constants";
 import { spikeClusterLayout } from "./hazards";
+import { verdantParallaxState, type ParallaxCrop } from "./parallax";
 import { propLayout } from "./props";
 import { GameModel } from "./model";
 import { HudText } from "./hud";
@@ -38,7 +39,7 @@ interface StoredSettings {
 const STORAGE_KEY = "birdddddd:v1";
 const LEGACY_STORAGE_KEY = "impossible-aviary:v1";
 const BACKGROUND_ASSETS = [
-  "biome-forest-background-runtime.png",
+  "biome-forest-far-background-v2-runtime.png",
   "biome-underground-jungle-background-runtime.png",
   "biome-desert-background-runtime.png",
   "biome-marble-cave-background-runtime.png",
@@ -57,6 +58,8 @@ export class AviaryScene extends Phaser.Scene {
   private settings!: StoredSettings;
   private background!: Phaser.GameObjects.Graphics;
   private biomeBackgrounds: Phaser.GameObjects.Image[] = [];
+  private verdantMidground!: Phaser.GameObjects.Image;
+  private verdantNear!: Phaser.GameObjects.Image;
   private terrainBase!: Phaser.GameObjects.Graphics;
   private terrainTiles!: Phaser.GameObjects.Container;
   private terrainTilePool: Phaser.GameObjects.Image[] = [];
@@ -92,6 +95,8 @@ export class AviaryScene extends Phaser.Scene {
 
   preload(): void {
     BACKGROUND_ASSETS.forEach((asset, chapter) => this.load.image(`biome-background-${chapter}`, `/assets/${asset}`));
+    this.load.image("verdant-midground", "/assets/biome-forest-midground-v2-runtime.png");
+    this.load.image("verdant-near", "/assets/biome-forest-near-v2-runtime.png");
     this.load.spritesheet("biome-props-atlas", "/assets/biome-props-atlas-runtime.png", {
       frameWidth: 128,
       frameHeight: 128,
@@ -122,6 +127,8 @@ export class AviaryScene extends Phaser.Scene {
       const image = this.add.image(0, 0, `biome-background-${chapter}`).setOrigin(0, 0).setDisplaySize(VIEW_WIDTH, VIEW_HEIGHT).setVisible(false);
       this.biomeBackgrounds.push(image);
     }
+    this.verdantMidground = this.add.image(0, 0, "verdant-midground").setOrigin(0, 0).setVisible(false);
+    this.verdantNear = this.add.image(0, 0, "verdant-near").setOrigin(0, 0).setVisible(false);
     this.terrainBase = this.add.graphics();
     this.terrainTiles = this.add.container();
     for (let index = 0; index < 768; index += 1) {
@@ -371,8 +378,32 @@ export class AviaryScene extends Phaser.Scene {
       if (chapter === from) alpha = 1 - progress;
       if (chapter === to) alpha = to === from ? 1 : progress;
       image.setVisible(alpha > 0).setAlpha(alpha);
-      if (alpha > 0) image.setCrop().setDisplaySize(VIEW_WIDTH, VIEW_HEIGHT);
+      if (alpha <= 0) continue;
+      if (chapter === 0) {
+        const parallax = verdantParallaxState(this.model.distance, this.cameraOffsetY, this.settings.reducedMotion);
+        this.applyParallaxCrop(image, parallax.far);
+      } else {
+        image.setCrop().setDisplaySize(VIEW_WIDTH, VIEW_HEIGHT);
+      }
     }
+    const verdantAlpha = from === 0 ? 1 - progress : to === 0 ? progress : 0;
+    const parallax = verdantParallaxState(this.model.distance, this.cameraOffsetY, this.settings.reducedMotion);
+    this.renderParallaxLayer(this.verdantMidground, parallax.mid, verdantAlpha);
+    this.renderParallaxLayer(this.verdantNear, parallax.near, verdantAlpha);
+  }
+
+  private applyParallaxCrop(image: Phaser.GameObjects.Image, crop: ParallaxCrop): void {
+    const scaleX = VIEW_WIDTH / crop.width;
+    const scaleY = VIEW_HEIGHT / crop.height;
+    image
+      .setCrop(crop.x, crop.y, crop.width, crop.height)
+      .setScale(scaleX, scaleY)
+      .setPosition(-crop.x * scaleX, -crop.y * scaleY);
+  }
+
+  private renderParallaxLayer(image: Phaser.GameObjects.Image, crop: ParallaxCrop, alpha: number): void {
+    image.setVisible(alpha > 0).setAlpha(alpha);
+    if (alpha > 0) this.applyParallaxCrop(image, crop);
   }
 
   private renderWorld(): void {

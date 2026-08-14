@@ -6,6 +6,7 @@ import { canTraverseChunk } from "../src/game/solver";
 import { CAMERA_DEAD_ZONE_BOTTOM, CAMERA_DEAD_ZONE_TOP, cameraTargetY, trackCameraY } from "../src/game/camera";
 import { spikeClusterLayout, TERRAIN_SPIKE_POINT_WIDTH } from "../src/game/hazards";
 import { PROP_ART, propLayout } from "../src/game/props";
+import { verdantParallaxState } from "../src/game/parallax";
 import type { ActiveChunk, ChunkDefinition } from "../src/game/types";
 
 const safeChunk = (feathers: Array<{ x: number; y: number }> = []): ChunkDefinition => ({
@@ -355,6 +356,21 @@ describe("birdddddd model", () => {
 
     const corruption = propLayout(5);
     expect(corruption.originY).toBeCloseTo(117 / 128, 5);
+  });
+
+  it("moves Verdant Wilds background layers at increasing depth rates", () => {
+    const start = verdantParallaxState(0, 0, false);
+    const moved = verdantParallaxState(200, 20, false);
+    expect(start.far.x).toBe(0);
+    expect(moved.far.x).toBe(5);
+    expect(moved.mid.x).toBeGreaterThan(moved.far.x);
+    expect(moved.near.x).toBeGreaterThan(moved.mid.x);
+    expect(moved.far.y).toBeLessThan(start.far.y);
+
+    const reduced = verdantParallaxState(200, 20, true);
+    expect(reduced.far.x).toBeLessThan(moved.far.x);
+    expect(reduced.mid.x).toBeLessThan(moved.mid.x);
+    expect(reduced.near.x).toBeLessThan(moved.near.x);
   });
 
   it("collides terrain spikes at their uniform visible height", () => {
