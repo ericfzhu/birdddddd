@@ -13,6 +13,8 @@ export type InteractiveAssetKind =
   | "shutter"
   | "beak"
   | "spinner"
+  | "sandjet"
+  | "sandjet-nozzle"
   | "flame"
   | "flame-warning"
   | "vine";
@@ -40,7 +42,11 @@ const common = ["platform", "pillar", "thorn", "barb"] as const;
 export const INTERACTIVE_ART: readonly InteractiveArtFamily[] = [
   { slug: "forest", assets: common, hazards: { thorns: "thorn", barbs: "barb" } },
   { slug: "underground-jungle", assets: [...common, "vine"], hazards: { thorns: "thorn", barbs: "barb", vine: "vine" } },
-  { slug: "desert", assets: common, hazards: { thorns: "thorn", barbs: "barb" } },
+  {
+    slug: "desert",
+    assets: [...common, "sandjet", "sandjet-nozzle"],
+    hazards: { thorns: "thorn", barbs: "barb", sandJet: "sandjet" },
+  },
   { slug: "marble-cave", assets: [...common, "crusher"], hazards: { thorns: "thorn", barbs: "barb", crusher: "crusher" } },
   { slug: "violet", assets: [...common, "crystal", "shutter"], hazards: { thorns: "thorn", barbs: "barb", crystal: "crystal", shutter: "shutter" } },
   { slug: "underground-corruption", assets: [...common, "spore", "shutter"], hazards: { thorns: "thorn", barbs: "barb", spore: "spore", shutter: "shutter" } },

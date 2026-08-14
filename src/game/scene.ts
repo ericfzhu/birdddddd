@@ -155,7 +155,7 @@ export class AviaryScene extends Phaser.Scene {
     const query = new URLSearchParams(window.location.search);
     const requestedSeed = Number(query.get("seed"));
     const requestedChapter = query.get("previewChapter");
-    const previewChapter = requestedChapter === null ? (import.meta.env.DEV ? 6 : 0) : Number(requestedChapter);
+    const previewChapter = requestedChapter === null ? (import.meta.env.DEV ? 2 : 0) : Number(requestedChapter);
     const seed = Number.isFinite(requestedSeed) && requestedSeed > 0 ? requestedSeed >>> 0 : (Date.now() ^ 0x51a7e) >>> 0;
     this.model = new GameModel(seed, this.settings.bestScore, Number.isFinite(previewChapter) ? previewChapter : 0);
     this.model.reducedMotion = this.settings.reducedMotion;
@@ -892,6 +892,38 @@ export class AviaryScene extends Phaser.Scene {
             .setRotation(rotation);
         }
         if (complete) this.authoredRects.add(rect);
+        continue;
+      }
+
+      if (rect.kind === "sandJet") {
+        const active = rect.active !== false;
+        const centerX = Math.round(rect.x + rect.w / 2);
+        const baseY = Math.round(rect.flipY ? rect.y : rect.y + rect.h);
+        const warningSprite = active
+          ? takeSprite(interactiveDangerTextureKey(rect.chapter, "sandjet"))
+          : undefined;
+        const nozzleSprite = takeSprite(interactiveTextureKey(rect.chapter, "sandjet-nozzle"));
+        const plumeSprite = active ? takeSprite(interactiveTextureKey(rect.chapter, "sandjet")) : undefined;
+        if (!nozzleSprite || (active && (!warningSprite || !plumeSprite))) {
+          warningSprite?.setVisible(false);
+          nozzleSprite?.setVisible(false);
+          plumeSprite?.setVisible(false);
+          continue;
+        }
+        nozzleSprite
+          .setOrigin(0.5, 1)
+          .setDisplaySize(rect.w + 8, 16)
+          .setPosition(centerX, baseY)
+          .setFlipY(rect.flipY === true);
+        if (warningSprite && plumeSprite) {
+          plumeSprite
+            .setOrigin(0.5, 1)
+            .setDisplaySize(rect.w + 8, rect.h + 4)
+            .setPosition(centerX, baseY)
+            .setFlipY(rect.flipY === true);
+          this.syncDangerSilhouette(warningSprite, plumeSprite, 4);
+        }
+        this.authoredRects.add(rect);
         continue;
       }
 

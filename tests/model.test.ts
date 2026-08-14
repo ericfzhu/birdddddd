@@ -185,6 +185,13 @@ describe("birdddddd model", () => {
     expect(keys.size).toBeGreaterThan(20);
   });
 
+  it("renders the desert sand jet from separate reusable nozzle and lethal plume assets", () => {
+    const desertArt = INTERACTIVE_ART[2];
+    expect(desertArt?.assets).toEqual(expect.arrayContaining(["sandjet", "sandjet-nozzle"]));
+    expect(authoredAssetForHazard(2, "sandJet")).toBe("sandjet");
+    expect(Object.values(desertArt?.hazards ?? {})).not.toContain("sandjet-nozzle");
+  });
+
   it("gives Minecart's narrow machinery stronger visual emphasis without changing collision data", () => {
     const minecartArt = INTERACTIVE_ART[6];
     expect(minecartArt?.emphasis).toMatchObject({
