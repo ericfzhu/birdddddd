@@ -85,7 +85,6 @@ function resolveSolid(state: SolverState, previousY: number, progress: number, s
       state.vy = 0;
     }
   }
-  if (solid.detail === "perch") return false;
   return state.y + halfH > solidY && state.y - halfH < solidY + solid.h;
 }
 

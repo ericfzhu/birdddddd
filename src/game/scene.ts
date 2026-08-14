@@ -16,7 +16,7 @@ import {
   VIEW_HEIGHT,
   VIEW_WIDTH,
 } from "./constants";
-import { spikeClusterLayout, spikeRotationForNormal } from "./hazards";
+import { sandJetVisualLayout, spikeClusterLayout, spikeRotationForNormal } from "./hazards";
 import { verdantParallaxState, type ParallaxCrop } from "./parallax";
 import { propGroundPlacement, propLayout } from "./props";
 import {
@@ -899,8 +899,12 @@ export class AviaryScene extends Phaser.Scene {
       if (rect.kind === "sandJet") {
         const active = rect.active !== false;
         const centerX = Math.round(rect.x + rect.w / 2);
-        const baseY = Math.round(rect.flipY ? rect.y : rect.y + rect.h);
-        const openingY = baseY + (rect.flipY ? SANDJET_NOZZLE_DEPTH : -SANDJET_NOZZLE_DEPTH);
+        const layout = sandJetVisualLayout(
+          rect.y,
+          rect.h,
+          SANDJET_NOZZLE_DEPTH,
+          rect.attachment === "ceiling" || rect.flipY === true,
+        );
         const warningSprite = active
           ? takeSprite(interactiveDangerTextureKey(rect.chapter, "sandjet"))
           : undefined;
@@ -913,17 +917,17 @@ export class AviaryScene extends Phaser.Scene {
           continue;
         }
         nozzleSprite
-          .setOrigin(0.5, 1)
+          .setOrigin(0.5, layout.originY)
           .setDisplaySize(rect.w + 8, 16)
-          .setPosition(centerX, baseY)
+          .setPosition(centerX, Math.round(layout.baseY))
           .setAlpha(1)
-          .setFlipY(rect.flipY === true);
+          .setFlipY(layout.flipY);
         if (warningSprite && plumeSprite) {
           plumeSprite
-            .setOrigin(0.5, 1)
+            .setOrigin(0.5, layout.originY)
             .setDisplaySize(rect.w + 8, rect.h - SANDJET_NOZZLE_DEPTH + 4)
-            .setPosition(centerX, openingY)
-            .setFlipY(rect.flipY === true);
+            .setPosition(centerX, Math.round(layout.openingY))
+            .setFlipY(layout.flipY);
           this.syncDangerSilhouette(warningSprite, plumeSprite, 4);
         }
         this.authoredRects.add(rect);

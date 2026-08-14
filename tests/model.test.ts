@@ -16,7 +16,12 @@ import { CHUNKS, TRANSITION_CHUNKS, envelopesCompatible, tunnelOffsetAt, validat
 import { GameModel } from "../src/game/model";
 import { canTraverseChunk } from "../src/game/solver";
 import { CAMERA_DEAD_ZONE_BOTTOM, CAMERA_DEAD_ZONE_TOP, cameraTargetY, trackCameraY } from "../src/game/camera";
-import { spikeClusterLayout, spikeRotationForNormal, TERRAIN_SPIKE_POINT_WIDTH } from "../src/game/hazards";
+import {
+  sandJetVisualLayout,
+  spikeClusterLayout,
+  spikeRotationForNormal,
+  TERRAIN_SPIKE_POINT_WIDTH,
+} from "../src/game/hazards";
 import { PROP_ART, propGroundPlacement, propLayout } from "../src/game/props";
 import { verdantParallaxState } from "../src/game/parallax";
 import {
@@ -282,6 +287,21 @@ describe("birdddddd model", () => {
     ceilingNozzleContact.playerY = 58 + SANDJET_NOZZLE_DEPTH / 2;
     ceilingNozzleContact.step();
     expect(ceilingNozzleContact.mode).toBe("playing");
+
+    const ceilingPlumeContact = new GameModel(904);
+    ceilingPlumeContact.chunks = [activate(ceilingJet)];
+    ceilingPlumeContact.mode = "playing";
+    ceilingPlumeContact.playerY = 84;
+    ceilingPlumeContact.step();
+    expect(ceilingPlumeContact.mode).toBe("dead");
+  });
+
+  it("anchors ceiling sand-jet art downward from the ceiling opening", () => {
+    const floor = sandJetVisualLayout(80, 42, SANDJET_NOZZLE_DEPTH, false);
+    expect(floor).toEqual({ baseY: 122, openingY: 108, originY: 1, flipY: false });
+
+    const ceiling = sandJetVisualLayout(58, 42, SANDJET_NOZZLE_DEPTH, true);
+    expect(ceiling).toEqual({ baseY: 58, openingY: 72, originY: 0, flipY: true });
   });
 
   it("moves minecarts horizontally without changing their authored track height", () => {
@@ -409,7 +429,7 @@ describe("birdddddd model", () => {
     expect(model.recovering).toBe(false);
   });
 
-  it("lets the bird pass horizontal platform edges without pushback while retaining landings", () => {
+  it("pushes the bird back at floating-platform edges while retaining landings", () => {
     const sideContactChunk: ChunkDefinition = {
       ...safeChunk(),
       id: "test-perch-side",
@@ -423,7 +443,13 @@ describe("birdddddd model", () => {
 
     sideContact.step();
     expect(sideContact.mode).toBe("playing");
-    expect(sideContact.playerX).toBe(PLAYER_X);
+    expect(sideContact.playerX).toBeLessThan(PLAYER_X);
+    const firstPushX = sideContact.playerX;
+
+    sideContact.step();
+    expect(sideContact.mode).toBe("playing");
+    expect(sideContact.playerX).toBeLessThanOrEqual(firstPushX);
+    expect(sideContact.recovering).toBe(false);
 
     const landingChunk: ChunkDefinition = {
       ...safeChunk(),
