@@ -48,6 +48,7 @@ export class GameModel {
   featherChain = 0;
   chapter = 0;
   distance = 0;
+  chapterDistance = 0;
   simTime = 0;
   deathTimer = 0;
   lastFlipAt = -Infinity;
@@ -81,6 +82,7 @@ export class GameModel {
     this.featherChain = 0;
     this.chapter = 0;
     this.distance = 0;
+    this.chapterDistance = 0;
     this.simTime = 0;
     this.deathTimer = 0;
     this.lastFlipAt = -Infinity;
@@ -133,6 +135,7 @@ export class GameModel {
     const previousDistance = this.distance;
     const speed = CHAPTERS[this.chapter]?.speed ?? CHAPTERS[0].speed;
     this.distance += speed * dt;
+    this.chapterDistance += speed * dt;
     this.velocityY = clamp(
       this.velocityY + this.gravity * GRAVITY_ACCELERATION * dt,
       -MAX_VERTICAL_SPEED,
@@ -292,6 +295,7 @@ export class GameModel {
       bestScore: this.bestScore,
       featherChain: this.featherChain,
       chapter: CHAPTERS[this.chapter]?.name,
+      chapterDistance: Number(this.chapterDistance.toFixed(2)),
       speed: CHAPTERS[this.chapter]?.speed,
       tunnel: this.tunnelBoundsAtWorldX(this.distance + this.playerX),
       transition: this.chapterTransition(),
@@ -537,6 +541,7 @@ export class GameModel {
         if (nextChapter !== this.chapter) {
           const previousChapter = this.chapter;
           this.chapter = nextChapter;
+          this.chapterDistance = 0;
           this.pendingTransition = { from: previousChapter, to: nextChapter };
           this.pruneUnseenQueue();
           this.events.push({ type: "chapter", chapter: this.chapter });

@@ -92,6 +92,7 @@ describe("birdddddd model", () => {
     expect(a.playerY).toBeCloseTo(b.playerY, 8);
     expect(a.velocityY).toBeCloseTo(b.velocityY, 8);
     expect(a.distance).toBeCloseTo(b.distance, 8);
+    expect(a.chapterDistance).toBeCloseTo(b.chapterDistance, 8);
   });
 
   it("lands safely on the ceiling", () => {
@@ -594,11 +595,13 @@ describe("birdddddd model", () => {
     model.gates = CHAPTERS[1].at - 1;
     model.score = CHAPTERS[1].at - 1;
     model.distance = 98;
+    model.chapterDistance = 640;
     model.chunks = [activate(safeChunk())];
 
     model.step();
 
     expect(model.chapter).toBe(1);
+    expect(model.chapterDistance).toBe(0);
     expect(model.gates).toBe(CHAPTERS[1].at);
     const passage = model.chunks.find((active) => active.definition.transition);
     expect(passage?.definition.id).toBe(TRANSITION_CHUNKS[0]?.id);
@@ -608,6 +611,9 @@ describe("birdddddd model", () => {
     model.distance = passage.startX - PLAYER_X + passage.definition.width / 2;
     expect(model.chapterTransition()).toMatchObject({ from: 0, to: 1, active: true });
     expect(model.chapterTransition()?.progress).toBeCloseTo(0.5, 5);
+
+    model.step();
+    expect(model.chapterDistance).toBeCloseTo(CHAPTERS[1].speed * FIXED_STEP_SECONDS, 5);
 
     model.distance = passage.startX - PLAYER_X + passage.definition.width + 1;
     model.step();
@@ -682,10 +688,12 @@ describe("birdddddd model", () => {
   it("restarts only after the death delay", () => {
     const model = new GameModel(2);
     model.mode = "dead";
+    model.chapterDistance = 240;
     expect(model.action()).toBe(false);
     model.advance(400);
     expect(model.action()).toBe(true);
     expect(model.mode).toBe("playing");
     expect(model.gravity).toBe(-1);
+    expect(model.chapterDistance).toBe(0);
   });
 });

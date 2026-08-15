@@ -449,20 +449,20 @@ export class AviaryScene extends Phaser.Scene {
       if (alpha <= 0) continue;
       if (chapter === 0 || chapter === 2) {
         const parallax = chapter === 0
-          ? verdantParallaxState(this.model.distance, this.cameraOffsetY, this.settings.reducedMotion)
-          : desertParallaxState(this.model.distance, this.cameraOffsetY, this.settings.reducedMotion);
+          ? verdantParallaxState(this.model.chapterDistance, this.cameraOffsetY, this.settings.reducedMotion)
+          : desertParallaxState(this.model.chapterDistance, this.cameraOffsetY, this.settings.reducedMotion);
         this.applyParallaxCrop(image, parallax.far);
       } else {
         image.setCrop().setDisplaySize(VIEW_WIDTH, VIEW_HEIGHT);
       }
     }
     const verdantAlpha = from === 0 ? 1 - progress : to === 0 ? progress : 0;
-    const parallax = verdantParallaxState(this.model.distance, this.cameraOffsetY, this.settings.reducedMotion);
+    const parallax = verdantParallaxState(this.model.chapterDistance, this.cameraOffsetY, this.settings.reducedMotion);
     this.renderParallaxLayer(this.verdantMidground, parallax.mid, verdantAlpha);
     this.renderParallaxLayer(this.verdantNear, parallax.near, verdantAlpha);
 
     const desertAlpha = from === 2 ? 1 - progress : to === 2 ? progress : 0;
-    const desertParallax = desertParallaxState(this.model.distance, this.cameraOffsetY, this.settings.reducedMotion);
+    const desertParallax = desertParallaxState(this.model.chapterDistance, this.cameraOffsetY, this.settings.reducedMotion);
     this.renderParallaxLayer(this.desertMidground, desertParallax.mid, desertAlpha);
     this.renderParallaxLayer(this.desertNear, desertParallax.near, desertAlpha);
   }
