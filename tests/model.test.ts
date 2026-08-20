@@ -166,6 +166,7 @@ describe("birdddddd model", () => {
     expect(CHUNKS.find((chunk) => chunk.id === "underworld-forge")?.chapter).toBe(9);
     expect(INTERACTIVE_ART[2]?.slug).toBe("mushroom-kingdom");
     expect(INTERACTIVE_ART[2]?.emphasis?.pillarWidthBonus).toBe(8);
+    expect(propLayout(2).originY).toBe(1);
     expect(transitionArtFor(1, 2)?.slug).toBe("jungle-mushroom");
     expect(transitionArtFor(2, 3)?.slug).toBe("mushroom-dunes");
   });

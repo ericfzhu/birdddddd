@@ -20,7 +20,7 @@ const DEFAULT_PROP: PropArtMetrics = {
 export const PROP_ART: readonly PropArtMetrics[] = [
   { ...DEFAULT_PROP, maxSize: 52 },
   { sourceWidth: 128, sourceHeight: 85, alphaLeft: 15, alphaRight: 112, alphaBottom: 85, maxSize: 50 },
-  { sourceWidth: 128, sourceHeight: 83, alphaLeft: 0, alphaRight: 128, alphaBottom: 82, maxSize: 50 },
+  { sourceWidth: 128, sourceHeight: 75, alphaLeft: 0, alphaRight: 128, alphaBottom: 75, maxSize: 50 },
   { ...DEFAULT_PROP, alphaLeft: 8, alphaRight: 121, maxSize: 45 },
   { sourceWidth: 122, sourceHeight: 128, alphaLeft: 0, alphaRight: 102, alphaBottom: 122, maxSize: 48 },
   { ...DEFAULT_PROP, maxSize: 48 },
