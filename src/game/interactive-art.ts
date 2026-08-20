@@ -10,7 +10,6 @@ export type InteractiveAssetKind =
   | "spore"
   | "cart"
   | "walker"
-  | "walker-step"
   | "winged-shell"
   | "ember"
   | "shutter"
@@ -47,7 +46,7 @@ export const INTERACTIVE_ART: readonly InteractiveArtFamily[] = [
   { slug: "underground-jungle", assets: [...common, "vine"], hazards: { thorns: "thorn", barbs: "barb", vine: "vine" } },
   {
     slug: "mushroom-kingdom",
-    assets: [...common, "walker", "walker-step", "winged-shell"],
+    assets: [...common, "walker", "winged-shell"],
     hazards: { thorns: "thorn", barbs: "barb", walker: "walker", wingedShell: "winged-shell" },
     emphasis: { pillarWidthBonus: 8 },
   },

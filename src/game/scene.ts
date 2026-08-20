@@ -20,7 +20,7 @@ import {
 import { sandJetVisualLayout, spikeClusterLayout, spikeRotationForNormal } from "./hazards";
 import { biomeParallaxState, PARALLAX_BIOME_SLUGS, type ParallaxCrop } from "./parallax";
 import { propGroundPlacementAtWorldX, propLayout } from "./props";
-import { dangerOutlineDisplaySize, screenXAtRenderDistance, snappedRenderDistance } from "./rendering";
+import { dangerOutlineDisplaySize, screenXAtRenderDistance, snappedRenderDistance, walkerLayerLayout } from "./rendering";
 import {
   authoredAssetForHazard,
   interactiveAssetPath,
@@ -157,7 +157,7 @@ export class AviaryScene extends Phaser.Scene {
     const dangerColor = `#${DANGER_RED.toString(16).padStart(6, "0")}`;
     INTERACTIVE_ART.forEach((family, chapter) => {
       for (const asset of family.assets) {
-        if (!Object.values(family.hazards).includes(asset) && asset !== "walker-step") continue;
+        if (!Object.values(family.hazards).includes(asset)) continue;
         this.createSolidSilhouetteTexture(
           interactiveTextureKey(chapter, asset),
           interactiveDangerTextureKey(chapter, asset),
@@ -856,6 +856,7 @@ export class AviaryScene extends Phaser.Scene {
         .setTintMode(Phaser.TintModes.MULTIPLY)
         .setFlipX(false)
         .setFlipY(false)
+        .setCrop()
         .setRotation(0)
         .setVisible(true);
     };
@@ -1001,21 +1002,60 @@ export class AviaryScene extends Phaser.Scene {
         continue;
       }
 
+      if (rect.kind === "walker") {
+        const texture = interactiveTextureKey(rect.chapter, "walker");
+        const source = this.textures.get(texture).getSourceImage();
+        const layout = walkerLayerLayout(source.width, source.height, this.model.simTime, this.settings.reducedMotion);
+        const warningSprite = takeSprite(interactiveDangerTextureKey(rect.chapter, "walker"));
+        const bodySprite = takeSprite(texture);
+        const leftLegSprite = takeSprite(texture);
+        const rightLegSprite = takeSprite(texture);
+        if (!warningSprite || !bodySprite || !leftLegSprite || !rightLegSprite) {
+          warningSprite?.setVisible(false);
+          bodySprite?.setVisible(false);
+          leftLegSprite?.setVisible(false);
+          rightLegSprite?.setVisible(false);
+          continue;
+        }
+
+        const centerX = Math.round(rect.x + rect.w / 2);
+        const baseY = Math.round(rect.y + rect.h + 1);
+        const facingRight = rect.motionDirectionX === 1;
+        const directionScale = facingRight ? -1 : 1;
+        const setLayerBase = (sprite: Phaser.GameObjects.Image): Phaser.GameObjects.Image => sprite
+          .setOrigin(0.5, 1)
+          .setDisplaySize(rect.w + 4, rect.h + 4)
+          .setFlipX(facingRight);
+
+        setLayerBase(bodySprite)
+          .setCrop(...layout.bodyCrop)
+          .setPosition(centerX, baseY);
+        setLayerBase(leftLegSprite)
+          .setCrop(...layout.leftLegCrop)
+          .setPosition(centerX + layout.leftLegOffset.x * directionScale, baseY + layout.leftLegOffset.y);
+        setLayerBase(rightLegSprite)
+          .setCrop(...layout.rightLegCrop)
+          .setPosition(centerX + layout.rightLegOffset.x * directionScale, baseY + layout.rightLegOffset.y);
+        warningSprite
+          .setOrigin(0.5, 1)
+          .setDisplaySize(rect.w + 4, rect.h + 4)
+          .setPosition(centerX, baseY)
+          .setFlipX(facingRight);
+        this.syncDangerSilhouette(warningSprite, bodySprite);
+        this.authoredRects.add(rect);
+        continue;
+      }
+
       const asset = authoredAssetForHazard(rect.chapter, rect.kind);
       if (!asset) continue;
-      const renderAsset = rect.kind === "walker"
-        && !this.settings.reducedMotion
-        && Math.floor(this.model.simTime * 8) % 2 === 1
-        ? "walker-step"
-        : asset;
-      const texture = interactiveTextureKey(rect.chapter, renderAsset);
+      const texture = interactiveTextureKey(rect.chapter, asset);
       const centerX = Math.round(rect.x + rect.w / 2);
       const centerY = Math.round(rect.y + rect.h / 2);
       const firstSprite = takeSprite(texture);
       if (!firstSprite) continue;
       const warningSprite = rect.active === false
         ? undefined
-        : firstSprite.setTexture(interactiveDangerTextureKey(rect.chapter, renderAsset));
+        : firstSprite.setTexture(interactiveDangerTextureKey(rect.chapter, asset));
       const sprite = warningSprite ? takeSprite(texture) : firstSprite;
       if (!sprite) {
         warningSprite?.setVisible(false);
@@ -1029,12 +1069,6 @@ export class AviaryScene extends Phaser.Scene {
         sprite.setOrigin(0.5, 0.5).setDisplaySize(width, rect.h + 4).setPosition(centerX, centerY);
       } else if (rect.kind === "beak") {
         sprite.setOrigin(0.5, 0.5).setDisplaySize(rect.w + 4, rect.h + 3).setPosition(centerX, centerY).setFlipY(rect.flipY === true);
-      } else if (rect.kind === "walker") {
-        sprite
-          .setOrigin(0.5, 1)
-          .setDisplaySize(rect.w + 4, rect.h + 4)
-          .setPosition(centerX, Math.round(rect.y + rect.h + 1))
-          .setFlipX(rect.motionDirectionX === 1);
       } else if (rect.kind === "wingedShell") {
         sprite
           .setOrigin(0.5, 0.5)

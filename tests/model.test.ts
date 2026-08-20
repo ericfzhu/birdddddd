@@ -25,7 +25,7 @@ import {
 } from "../src/game/hazards";
 import { PROP_ART, propGroundPlacement, propGroundPlacementAtWorldX, propLayout } from "../src/game/props";
 import { biomeParallaxState, desertParallaxState, PARALLAX_BIOME_SLUGS, verdantParallaxState } from "../src/game/parallax";
-import { dangerOutlineDisplaySize, screenXAtRenderDistance, snappedRenderDistance } from "../src/game/rendering";
+import { dangerOutlineDisplaySize, screenXAtRenderDistance, snappedRenderDistance, walkerLayerLayout } from "../src/game/rendering";
 import {
   authoredAssetForHazard,
   interactiveDangerTextureKey,
@@ -166,7 +166,7 @@ describe("birdddddd model", () => {
     expect(CHUNKS.find((chunk) => chunk.id === "underworld-forge")?.chapter).toBe(9);
     expect(INTERACTIVE_ART[2]?.slug).toBe("mushroom-kingdom");
     expect(INTERACTIVE_ART[2]?.emphasis?.pillarWidthBonus).toBe(8);
-    expect(INTERACTIVE_ART[2]?.assets).toEqual(expect.arrayContaining(["walker", "walker-step", "winged-shell"]));
+    expect(INTERACTIVE_ART[2]?.assets).toEqual(expect.arrayContaining(["walker", "winged-shell"]));
     expect(authoredAssetForHazard(2, "walker")).toBe("walker");
     expect(authoredAssetForHazard(2, "wingedShell")).toBe("winged-shell");
     const mushroomHazards = CHUNKS.filter((chunk) => chunk.chapter === 2).flatMap((chunk) => chunk.hazards);
@@ -438,6 +438,20 @@ describe("birdddddd model", () => {
     expect(shifted?.y).toBeCloseTo((start?.y ?? 0) + 4, 5);
     model.simTime = 2;
     expect(model.visibleRects()[0]?.motionDirectionX).toBe(-1);
+  });
+
+  it("animates walker legs independently while keeping one immutable body crop", () => {
+    const first = walkerLayerLayout(80, 72, 0, false);
+    const second = walkerLayerLayout(80, 72, 0.13, false);
+    expect(first.bodyCrop).toEqual([0, 0, 80, 48]);
+    expect(second.bodyCrop).toEqual(first.bodyCrop);
+    expect(first.leftLegCrop).toEqual(second.leftLegCrop);
+    expect(first.rightLegCrop).toEqual(second.rightLegCrop);
+    expect(second.leftLegOffset).toEqual({ x: 1, y: -1 });
+    expect(second.rightLegOffset).toEqual({ x: -1, y: 0 });
+
+    const reduced = walkerLayerLayout(80, 72, 9.9, true);
+    expect(reduced.step).toBe(0);
   });
 
   it("authors rising and falling tunnel sections that return to compatible flat entrances", () => {
