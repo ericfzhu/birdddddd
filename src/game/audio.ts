@@ -63,6 +63,11 @@ export class AudioDirector {
     this.tone(130, 0.045, 0.04, "square");
   }
 
+  stomp(): void {
+    this.tone(170, 0.05, 0.05, "square");
+    this.tone(360, 0.075, 0.035, "triangle", undefined, 0.025);
+  }
+
   feather(chain: number): void {
     this.tone(720 + chain * 90, 0.085, 0.045, "triangle");
   }

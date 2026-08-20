@@ -5,6 +5,7 @@ import {
   FLAME_VENT_DEPTH,
   FIXED_STEP_SECONDS,
   FLIP_DEBOUNCE_SECONDS,
+  HITBOX_INSET,
   PLAY_BOTTOM,
   PLAY_TOP,
   PLAYER_HEIGHT,
@@ -12,6 +13,7 @@ import {
   PLAYER_RECOVERY_SPEED,
   PLAYER_X,
   SANDJET_NOZZLE_DEPTH,
+  WALKER_STOMP_BOUNCE_SPEED,
 } from "../src/game/constants";
 import { CHUNKS, TRANSITION_CHUNKS, envelopesCompatible, tunnelOffsetAt, validateChunkLibrary } from "../src/game/chunks";
 import { GameModel } from "../src/game/model";
@@ -655,6 +657,72 @@ describe("birdddddd model", () => {
     model.mode = "playing";
     model.step();
     expect(model.mode).toBe("dead");
+  });
+
+  it("stomps a walker from above, removes it, and rebounds the bird", () => {
+    const stompChunk: ChunkDefinition = {
+      ...safeChunk(),
+      hazards: [{ x: PLAYER_X - 7, y: 100, w: 18, h: 16, kind: "walker", attachment: "floor" }],
+    };
+    const model = new GameModel(813);
+    model.chunks = [activate(stompChunk)];
+    model.mode = "playing";
+    model.playerY = 95.5;
+    model.velocityY = 60;
+
+    model.step();
+
+    expect(model.mode).toBe("playing");
+    expect(model.playerY).toBe(96);
+    expect(model.velocityY).toBe(-WALKER_STOMP_BOUNCE_SPEED);
+    expect(model.stomps).toBe(1);
+    expect(model.visibleRects().some((rect) => rect.kind === "walker")).toBe(false);
+    expect(model.drainEvents()).toContainEqual(expect.objectContaining({ type: "stomp" }));
+
+    model.step();
+    expect(model.mode).toBe("playing");
+  });
+
+  it("de-wings a stomped flying shell, lands it as a walker, then retracts it on a later stomp", () => {
+    const flyingChunk: ChunkDefinition = {
+      ...safeChunk(),
+      hazards: [{ x: PLAYER_X - 7, y: 100, w: 22, h: 16, kind: "wingedShell", attachment: "floating" }],
+    };
+    const model = new GameModel(814);
+    model.chunks = [activate(flyingChunk)];
+    model.mode = "playing";
+    model.playerY = 95.5;
+    model.velocityY = 60;
+
+    model.step();
+
+    expect(model.mode).toBe("playing");
+    expect(model.velocityY).toBe(-WALKER_STOMP_BOUNCE_SPEED);
+    expect(model.stomps).toBe(1);
+    expect(model.visibleRects().find((rect) => rect.kind === "wingedShell")?.enemyState).toBe("falling");
+    expect(model.drainEvents()).toContainEqual(expect.objectContaining({
+      type: "stomp",
+      enemy: "wingedShell",
+      outcome: "dewinged",
+    }));
+
+    model.advance(500);
+    const grounded = model.visibleRects().find((rect) => rect.kind === "wingedShell");
+    expect(grounded?.enemyState).toBe("walking");
+    expect(grounded?.motionDirectionX).toBeDefined();
+
+    model.playerX = (grounded?.x ?? PLAYER_X) + (grounded?.w ?? 22) / 2;
+    model.playerY = (grounded?.y ?? 100) - (PLAYER_HEIGHT / 2 - HITBOX_INSET) + 0.5;
+    model.velocityY = 60;
+    model.step();
+    expect(model.mode).toBe("playing");
+    expect(model.stomps).toBe(2);
+    expect(model.visibleRects().find((rect) => rect.kind === "wingedShell")?.enemyState).toBe("shell");
+    expect(model.drainEvents()).toContainEqual(expect.objectContaining({
+      type: "stomp",
+      enemy: "wingedShell",
+      outcome: "shelled",
+    }));
   });
 
   it("uses uniform individual spike geometry while varying the number of points", () => {

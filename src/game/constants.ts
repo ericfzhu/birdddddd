@@ -14,6 +14,7 @@ export const SANDJET_NOZZLE_DEPTH = 14;
 export const FLAME_VENT_DEPTH = 14;
 export const GRAVITY_ACCELERATION = 420;
 export const MAX_VERTICAL_SPEED = 155;
+export const WALKER_STOMP_BOUNCE_SPEED = 125;
 export const FLIP_DEBOUNCE_SECONDS = 0.08;
 export const RESTART_DELAY_SECONDS = 0.32;
 export const FIXED_STEP_SECONDS = 1 / 60;

@@ -16,6 +16,7 @@ import {
   RESTART_DELAY_SECONDS,
   SANDJET_NOZZLE_DEPTH,
   TERRAIN_SPIKE_COLLISION_RATIO,
+  WALKER_STOMP_BOUNCE_SPEED,
   VIEW_WIDTH,
   chapterForGates,
 } from "./constants";
@@ -26,10 +27,19 @@ import type {
   GameEvent,
   GameMode,
   HazardSpec,
+  EnemyState,
   VisibleFeather,
   VisibleRect,
   VisibleTunnelPoint,
 } from "./types";
+
+interface WingedShellRuntimeState {
+  phase: Exclude<EnemyState, "flying">;
+  localX: number;
+  y: number;
+  velocityY: number;
+  velocityX: number;
+}
 
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
 
@@ -56,6 +66,7 @@ export class GameModel {
   seed: number;
   reducedMotion = false;
   recovering = false;
+  stomps = 0;
   chunks: ActiveChunk[] = [];
   private rngState: number;
   private events: GameEvent[] = [];
@@ -63,6 +74,8 @@ export class GameModel {
   private pendingTransition?: { from: number; to: number };
   private parallaxTransitionId = "";
   private outgoingChapterDistance = 0;
+  private defeatedHazards = new WeakMap<ActiveChunk, Set<number>>();
+  private wingedShellStates = new WeakMap<ActiveChunk, Map<number, WingedShellRuntimeState>>();
 
   constructor(seed = 0x51a7e, bestScore = 0, startingChapter = 0, startingChunkId?: string) {
     this.seed = seed >>> 0;
@@ -90,6 +103,7 @@ export class GameModel {
     this.deathTimer = 0;
     this.lastFlipAt = -Infinity;
     this.recovering = false;
+    this.stomps = 0;
     this.seed = nextSeed;
     this.rngState = nextSeed;
     this.events = [];
@@ -98,6 +112,8 @@ export class GameModel {
     this.pendingTransition = undefined;
     this.parallaxTransitionId = "";
     this.outgoingChapterDistance = 0;
+    this.defeatedHazards = new WeakMap<ActiveChunk, Set<number>>();
+    this.wingedShellStates = new WeakMap<ActiveChunk, Map<number, WingedShellRuntimeState>>();
     this.populateInitialChunks();
   }
 
@@ -148,13 +164,14 @@ export class GameModel {
       MAX_VERTICAL_SPEED,
     );
     this.playerY += this.velocityY * dt;
+    this.updateWingedShellStates(dt);
 
     const tunnelPushed = this.resolveTunnel(previousX, previousY, previousDistance);
     if (this.mode !== "playing") return;
     const solidPushed = this.resolveSolids(previousY);
     if (this.mode !== "playing") return;
     if (!tunnelPushed && !solidPushed) this.recoverPlayerX(dt);
-    this.processHazards();
+    this.processHazards(previousY);
     if (this.mode !== "playing") return;
     this.processFeathers();
     this.processGates();
@@ -191,22 +208,25 @@ export class GameModel {
           });
         }
       }
-      for (const hazard of active.definition.hazards) {
-        const motion = this.motionOffset(hazard);
-        const motionDirectionX = this.motionDirectionX(hazard);
+      for (const [hazardIndex, hazard] of active.definition.hazards.entries()) {
+        if (this.hazardIsDefeated(active, hazardIndex)) continue;
+        const state = this.wingedShellState(active, hazardIndex);
+        const motion = state ? { x: state.localX - hazard.x, y: 0 } : this.motionOffset(hazard);
+        const motionDirectionX = state?.phase === "walking" ? (state.velocityX >= 0 ? 1 : -1) : this.motionDirectionX(hazard);
         const x = origin + hazard.x + motion.x;
         const tunnelOffset = tunnelOffsetAt(active.definition, hazard.x + motion.x + hazard.w / 2);
         if (x < VIEW_WIDTH + 20 && x + hazard.w > -20) {
           rects.push({
             ...hazard,
             x,
-            y: hazard.y + tunnelOffset + motion.y,
+            y: state?.y ?? hazard.y + tunnelOffset + motion.y,
             kind: hazard.kind,
             chapter: active.definition.chapter,
             decoration: active.definition.decoration,
             active: hazard.cycle ? this.hazardIsActive(hazard) : undefined,
             cycleProgress: hazard.cycle ? this.hazardCycleProgress(hazard) : undefined,
             motionDirectionX,
+            enemyState: hazard.kind === "wingedShell" ? state?.phase ?? "flying" : undefined,
           });
         }
       }
@@ -315,13 +335,14 @@ export class GameModel {
       gates: this.gates,
       bestScore: this.bestScore,
       featherChain: this.featherChain,
+      stomps: this.stomps,
       chapter: CHAPTERS[this.chapter]?.name,
       chapterDistance: Number(this.chapterDistance.toFixed(2)),
       speed: CHAPTERS[this.chapter]?.speed,
       tunnel: this.tunnelBoundsAtWorldX(this.distance + this.playerX),
       transition: this.chapterTransition(),
       restartReady: this.mode === "dead" && this.deathTimer >= RESTART_DELAY_SECONDS,
-      hazards: visibleHazards.map(({ x, y, w, h, kind, active, cycleProgress, motionDirectionX }) => ({
+      hazards: visibleHazards.map(({ x, y, w, h, kind, active, cycleProgress, motionDirectionX, enemyState }) => ({
         x: Math.round(x),
         y: Math.round(y),
         w,
@@ -330,6 +351,7 @@ export class GameModel {
         ...(active === undefined ? {} : { active }),
         ...(cycleProgress === undefined ? {} : { cycleProgress: Number(cycleProgress.toFixed(2)) }),
         ...(motionDirectionX === undefined ? {} : { motionDirectionX }),
+        ...(enemyState === undefined ? {} : { enemyState }),
       })),
       solids: visibleSolids.map(({ x, y, w, h, detail }) => ({ x: Math.round(x), y: Math.round(y), w, h, detail })),
       feathers: this.visibleFeathers().filter((item) => !item.collected).slice(0, 6).map((item) => ({ x: Math.round(item.x), y: item.y })),
@@ -480,17 +502,20 @@ export class GameModel {
     return true;
   }
 
-  private processHazards(): void {
+  private processHazards(previousY: number): void {
+    const playerHalfHeight = PLAYER_HEIGHT / 2 - HITBOX_INSET;
     const playerRect = {
       x: this.playerX - PLAYER_WIDTH / 2 + HITBOX_INSET,
-      y: this.playerY - PLAYER_HEIGHT / 2 + HITBOX_INSET,
+      y: this.playerY - playerHalfHeight,
       w: PLAYER_WIDTH - HITBOX_INSET * 2,
-      h: PLAYER_HEIGHT - HITBOX_INSET * 2,
+      h: playerHalfHeight * 2,
     };
     for (const active of this.chunks) {
       const origin = active.startX - this.distance;
-      for (const hazard of active.definition.hazards) {
-        const motion = this.motionOffset(hazard);
+      for (const [hazardIndex, hazard] of active.definition.hazards.entries()) {
+        if (this.hazardIsDefeated(active, hazardIndex)) continue;
+        const state = this.wingedShellState(active, hazardIndex);
+        const motion = state ? { x: state.localX - hazard.x, y: 0 } : this.motionOffset(hazard);
         const tunnelOffset = tunnelOffsetAt(active.definition, hazard.x + motion.x + hazard.w / 2);
         if (!this.hazardIsActive(hazard)) continue;
         const terrainSpike = hazard.kind === "thorns" || hazard.kind === "barbs";
@@ -509,14 +534,108 @@ export class GameModel {
             : 0;
         const rect = {
           x: origin + hazard.x + motion.x,
-          y: hazard.y + tunnelOffset + motion.y + collisionInsetY,
+          y: (state?.y ?? hazard.y + tunnelOffset + motion.y) + collisionInsetY,
           w: hazard.w,
           h: collisionHeight,
         };
         if (overlaps(playerRect, rect)) {
+          const previousBottom = previousY + playerHalfHeight;
+          const currentBottom = this.playerY + playerHalfHeight;
+          const stompedEnemy = (hazard.kind === "walker" || hazard.kind === "wingedShell")
+            && this.velocityY > 0
+            && previousBottom <= rect.y + 0.75
+            && currentBottom >= rect.y;
+          if (stompedEnemy) {
+            const dewinged = hazard.kind === "wingedShell" && !state;
+            const shelled = hazard.kind === "wingedShell" && state?.phase === "walking";
+            if (dewinged) {
+              this.setWingedShellState(active, hazardIndex, {
+                phase: "falling",
+                localX: hazard.x + motion.x,
+                y: rect.y,
+                velocityY: 34,
+                velocityX: -22,
+              });
+            } else if (shelled && state) {
+              state.phase = "shell";
+              state.velocityX = 0;
+              state.velocityY = 0;
+            } else if (hazard.kind === "wingedShell" && state?.phase === "shell") {
+              // A stationary shell stays in the world; top contact simply gives
+              // the bird another safe bounce while side contact remains lethal.
+            } else {
+              this.defeatHazard(active, hazardIndex);
+            }
+            this.playerY = rect.y - playerHalfHeight;
+            this.velocityY = -WALKER_STOMP_BOUNCE_SPEED;
+            this.stomps += 1;
+            this.events.push({
+              type: "stomp",
+              x: rect.x + rect.w / 2,
+              y: rect.y + rect.h / 2,
+              direction: state?.velocityX && state.velocityX > 0 ? 1 : this.motionDirectionX(hazard) ?? -1,
+              enemy: hazard.kind as "walker" | "wingedShell",
+              outcome: dewinged ? "dewinged" : shelled ? "shelled" : hazard.kind === "wingedShell" ? "bounced" : "defeated",
+            });
+            return;
+          }
           this.die();
           return;
         }
+      }
+    }
+  }
+
+  private hazardIsDefeated(active: ActiveChunk, hazardIndex: number): boolean {
+    return this.defeatedHazards.get(active)?.has(hazardIndex) ?? false;
+  }
+
+  private defeatHazard(active: ActiveChunk, hazardIndex: number): void {
+    const defeated = this.defeatedHazards.get(active) ?? new Set<number>();
+    defeated.add(hazardIndex);
+    this.defeatedHazards.set(active, defeated);
+  }
+
+  private wingedShellState(active: ActiveChunk, hazardIndex: number): WingedShellRuntimeState | undefined {
+    return this.wingedShellStates.get(active)?.get(hazardIndex);
+  }
+
+  private setWingedShellState(active: ActiveChunk, hazardIndex: number, state: WingedShellRuntimeState): void {
+    const states = this.wingedShellStates.get(active) ?? new Map<number, WingedShellRuntimeState>();
+    states.set(hazardIndex, state);
+    this.wingedShellStates.set(active, states);
+  }
+
+  private updateWingedShellStates(dt: number): void {
+    for (const active of this.chunks) {
+      const states = this.wingedShellStates.get(active);
+      if (!states) continue;
+      for (const [hazardIndex, state] of states) {
+        const hazard = active.definition.hazards[hazardIndex];
+        if (!hazard || this.hazardIsDefeated(active, hazardIndex)) continue;
+        if (state.phase === "falling") {
+          state.velocityY = Math.min(155, state.velocityY + 360 * dt);
+          state.y += state.velocityY * dt;
+          const floor = PLAY_BOTTOM + tunnelOffsetAt(active.definition, state.localX + hazard.w / 2);
+          if (state.y + hazard.h >= floor) {
+            state.phase = "walking";
+            state.y = floor - hazard.h;
+            state.velocityY = 0;
+          }
+          continue;
+        }
+        if (state.phase === "shell") continue;
+        state.localX += state.velocityX * dt;
+        const patrolMin = Math.max(4, hazard.x - 22);
+        const patrolMax = Math.min(active.definition.width - hazard.w - 4, hazard.x + 22);
+        if (state.localX <= patrolMin) {
+          state.localX = patrolMin;
+          state.velocityX = Math.abs(state.velocityX);
+        } else if (state.localX >= patrolMax) {
+          state.localX = patrolMax;
+          state.velocityX = -Math.abs(state.velocityX);
+        }
+        state.y = PLAY_BOTTOM + tunnelOffsetAt(active.definition, state.localX + hazard.w / 2) - hazard.h;
       }
     }
   }

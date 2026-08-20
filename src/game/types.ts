@@ -17,6 +17,7 @@ export type HazardKind =
   | "ember"
   | "flame";
 export type HazardAttachment = "ceiling" | "floor" | "floating";
+export type EnemyState = "flying" | "falling" | "walking" | "shell";
 
 export interface Envelope {
   surface: SurfacePreference;
@@ -110,6 +111,7 @@ export type GameEvent =
   | { type: "land" }
   | { type: "feather"; chain: number }
   | { type: "bonus" }
+  | { type: "stomp"; x: number; y: number; direction: -1 | 1; enemy: "walker" | "wingedShell"; outcome: "defeated" | "dewinged" | "shelled" | "bounced" }
   | { type: "gate"; score: number }
   | { type: "chapter"; chapter: number }
   | { type: "death"; score: number }
@@ -124,6 +126,7 @@ export interface VisibleRect extends RectSpec {
   active?: boolean;
   cycleProgress?: number;
   motionDirectionX?: -1 | 1;
+  enemyState?: EnemyState;
   chapter: number;
   decoration: ChunkDefinition["decoration"];
 }

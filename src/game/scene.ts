@@ -44,6 +44,17 @@ interface FeatherParticle {
   color: number;
 }
 
+interface DefeatedWalkerParticle {
+  sprite: Phaser.GameObjects.Image;
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  angularVelocity: number;
+  rotation: number;
+  life: number;
+}
+
 interface StoredSettings {
   bestScore: number;
   muted: boolean;
@@ -89,6 +100,8 @@ export class AviaryScene extends Phaser.Scene {
   private propPool: Phaser.GameObjects.Image[] = [];
   private authoredTerrainLayer!: Phaser.GameObjects.Container;
   private authoredTerrainPool: Phaser.GameObjects.Image[] = [];
+  private defeatedEnemyLayer!: Phaser.GameObjects.Container;
+  private defeatedWalkers: DefeatedWalkerParticle[] = [];
   private authoredRects = new Set<VisibleRect>();
   private dangerSilhouetteMetrics = new Map<string, DangerSilhouetteMetrics>();
   private renderDistance = 0;
@@ -157,7 +170,8 @@ export class AviaryScene extends Phaser.Scene {
     const dangerColor = `#${DANGER_RED.toString(16).padStart(6, "0")}`;
     INTERACTIVE_ART.forEach((family, chapter) => {
       for (const asset of family.assets) {
-        if (!Object.values(family.hazards).includes(asset)) continue;
+        const articulatedWingedShellPart = asset === "winged-shell-body" || asset === "winged-shell-wing" || asset === "winged-shell-retracted";
+        if (!Object.values(family.hazards).includes(asset) && !articulatedWingedShellPart) continue;
         this.createSolidSilhouetteTexture(
           interactiveTextureKey(chapter, asset),
           interactiveDangerTextureKey(chapter, asset),
@@ -211,6 +225,7 @@ export class AviaryScene extends Phaser.Scene {
       this.authoredTerrainLayer.add(sprite);
       this.authoredTerrainPool.push(sprite);
     }
+    this.defeatedEnemyLayer = this.add.container();
     this.world = this.add.graphics();
     this.effects = this.add.graphics();
     this.ui = this.add.graphics();
@@ -325,6 +340,11 @@ export class AviaryScene extends Phaser.Scene {
       const feathers = snapshot.feathers as Array<Record<string, unknown>>;
       for (const feather of feathers) feather.screenY = Math.round(Number(feather.y) + this.cameraOffsetY);
       snapshot.camera = { offsetY: Number(this.cameraOffsetY.toFixed(2)), deadZone: [76, 104] };
+      snapshot.defeatedWalkers = this.defeatedWalkers.slice(0, 4).map((defeated) => ({
+        x: Number(defeated.x.toFixed(2)),
+        y: Number((defeated.y + this.cameraOffsetY).toFixed(2)),
+        rotation: Number(defeated.rotation.toFixed(2)),
+      }));
       snapshot.settings = { muted: this.settings.muted, reducedMotion: this.settings.reducedMotion };
       return JSON.stringify(snapshot);
     };
@@ -389,6 +409,12 @@ export class AviaryScene extends Phaser.Scene {
           this.pulse = this.settings.reducedMotion ? 0.04 : 0.18;
           this.audio.bonus();
           break;
+        case "stomp":
+          this.landingSquash = this.settings.reducedMotion ? 0.02 : 0.09;
+          this.audio.stomp();
+          if (event.outcome === "defeated") this.spawnDefeatedEnemy(event.x, event.y, event.direction, event.enemy);
+          this.spawnFeathers(event.x, event.y, 5, COLORS.cream);
+          break;
         case "gate":
           this.audio.gate();
           break;
@@ -403,6 +429,8 @@ export class AviaryScene extends Phaser.Scene {
           break;
         case "restart":
           this.particles = [];
+          for (const defeated of this.defeatedWalkers) defeated.sprite.destroy();
+          this.defeatedWalkers = [];
           this.lastTransitionId = "";
           this.bannerChapter = 0;
           break;
@@ -434,6 +462,16 @@ export class AviaryScene extends Phaser.Scene {
       particle.vx *= 0.985;
     }
     this.particles = this.particles.filter((particle) => particle.life > 0);
+    for (const defeated of this.defeatedWalkers) {
+      defeated.life -= delta;
+      defeated.x += defeated.vx * delta;
+      defeated.y += defeated.vy * delta;
+      defeated.vy += 250 * delta;
+      defeated.rotation += defeated.angularVelocity * delta;
+    }
+    const expired = this.defeatedWalkers.filter((defeated) => defeated.life <= 0 || defeated.y > VIEW_HEIGHT + 48 || defeated.x < -48 || defeated.x > VIEW_WIDTH + 48);
+    for (const defeated of expired) defeated.sprite.destroy();
+    this.defeatedWalkers = this.defeatedWalkers.filter((defeated) => !expired.includes(defeated));
   }
 
   private updateCamera(delta: number): void {
@@ -454,6 +492,25 @@ export class AviaryScene extends Phaser.Scene {
         color,
       });
     }
+  }
+
+  private spawnDefeatedEnemy(x: number, y: number, direction: -1 | 1, enemy: "walker" | "wingedShell"): void {
+    const asset = enemy === "walker" ? "walker" : "winged-shell-body";
+    const sprite = this.add.image(0, 0, interactiveTextureKey(2, asset))
+      .setOrigin(0.5, 0.5)
+      .setDisplaySize(22, 20)
+      .setFlipX(direction === 1);
+    this.defeatedEnemyLayer.add(sprite);
+    this.defeatedWalkers.push({
+      sprite,
+      x: x + this.model.distance - this.renderDistance,
+      y,
+      vx: direction * 38,
+      vy: -105,
+      angularVelocity: direction * (this.settings.reducedMotion ? 5 : 11),
+      rotation: 0,
+      life: 2.2,
+    });
   }
 
   private renderFrame(): void {
@@ -1046,6 +1103,82 @@ export class AviaryScene extends Phaser.Scene {
         continue;
       }
 
+      if (rect.kind === "wingedShell") {
+        const shelled = rect.enemyState === "shell";
+        const bodyTexture = interactiveTextureKey(rect.chapter, shelled ? "winged-shell-retracted" : "winged-shell-body");
+        const wingTexture = interactiveTextureKey(rect.chapter, "winged-shell-wing");
+        const flying = rect.enemyState === "flying";
+        const rearWarning = flying ? takeSprite(interactiveDangerTextureKey(rect.chapter, "winged-shell-wing")) : undefined;
+        const rearWing = flying ? takeSprite(wingTexture) : undefined;
+        const bodyWarning = takeSprite(interactiveDangerTextureKey(rect.chapter, shelled ? "winged-shell-retracted" : "winged-shell-body"));
+        const body = takeSprite(bodyTexture);
+        const frontWarning = flying ? takeSprite(interactiveDangerTextureKey(rect.chapter, "winged-shell-wing")) : undefined;
+        const frontWing = flying ? takeSprite(wingTexture) : undefined;
+        if (!body || !bodyWarning) {
+          body?.setVisible(false);
+          bodyWarning?.setVisible(false);
+          continue;
+        }
+        const centerX = Math.round(rect.x + rect.w / 2);
+        const centerY = Math.round(rect.y + rect.h / 2);
+        const grounded = rect.enemyState === "walking";
+        const facingRight = grounded && rect.motionDirectionX === 1;
+        const bodyWidth = shelled ? rect.w + 3 : rect.w + 5;
+        const bodyHeight = shelled ? rect.h - 3 : rect.h + 3;
+        const bodyY = shelled ? Math.round(rect.y + rect.h) : centerY;
+        const bodyOriginY = shelled ? 1 : 0.5;
+        body
+          .setOrigin(0.5, bodyOriginY)
+          .setDisplaySize(bodyWidth, bodyHeight)
+          .setPosition(centerX, bodyY)
+          .setFlipX(facingRight);
+        bodyWarning
+          .setOrigin(0.5, bodyOriginY)
+          .setDisplaySize(bodyWidth, bodyHeight)
+          .setPosition(centerX, bodyY)
+          .setFlipX(facingRight);
+        this.syncDangerSilhouette(bodyWarning, body);
+
+        if (flying) {
+          if (rearWing && frontWing && rearWarning && frontWarning) {
+            const beat = this.settings.reducedMotion ? 0 : Math.sin(this.uiTime * 13);
+            const rearRotation = -0.48 + beat * 0.2;
+            const frontRotation = 0.28 - beat * 0.26;
+            rearWing
+              .setOrigin(0.12, 0.9)
+              .setDisplaySize(10, 15)
+              .setPosition(centerX - 2, centerY + 3)
+              .setFlipX(true)
+              .setRotation(rearRotation);
+            frontWing
+              .setOrigin(0.12, 0.9)
+              .setDisplaySize(14, 20)
+              .setPosition(centerX + 3, centerY + 3)
+              .setRotation(frontRotation);
+            rearWarning
+              .setOrigin(0.12, 0.9)
+              .setDisplaySize(10, 15)
+              .setPosition(centerX - 2, centerY + 3)
+              .setFlipX(true)
+              .setRotation(rearRotation);
+            frontWarning
+              .setOrigin(0.12, 0.9)
+              .setDisplaySize(14, 20)
+              .setPosition(centerX + 3, centerY + 3)
+              .setRotation(frontRotation);
+            this.syncDangerSilhouette(rearWarning, rearWing);
+            this.syncDangerSilhouette(frontWarning, frontWing);
+          } else {
+            rearWing?.setVisible(false);
+            frontWing?.setVisible(false);
+            rearWarning?.setVisible(false);
+            frontWarning?.setVisible(false);
+          }
+        }
+        this.authoredRects.add(rect);
+        continue;
+      }
+
       const asset = authoredAssetForHazard(rect.chapter, rect.kind);
       if (!asset) continue;
       const texture = interactiveTextureKey(rect.chapter, asset);
@@ -1069,16 +1202,6 @@ export class AviaryScene extends Phaser.Scene {
         sprite.setOrigin(0.5, 0.5).setDisplaySize(width, rect.h + 4).setPosition(centerX, centerY);
       } else if (rect.kind === "beak") {
         sprite.setOrigin(0.5, 0.5).setDisplaySize(rect.w + 4, rect.h + 3).setPosition(centerX, centerY).setFlipY(rect.flipY === true);
-      } else if (rect.kind === "wingedShell") {
-        sprite
-          .setOrigin(0.5, 0.5)
-          .setDisplaySize(rect.w + 7, rect.h + 8)
-          .setPosition(centerX, centerY);
-        if (!this.settings.reducedMotion) {
-          const wingBeat = 1 + Math.sin(this.uiTime * 13) * 0.055;
-          sprite.setScale(sprite.scaleX, sprite.scaleY * wingBeat);
-          sprite.setRotation(Math.sin(this.uiTime * 5) * 0.035);
-        }
       } else {
         sprite
           .setOrigin(0.5, 0.5)
@@ -1271,6 +1394,11 @@ export class AviaryScene extends Phaser.Scene {
       const alpha = Math.min(1, particle.life * 3);
       g.fillStyle(particle.color, alpha);
       g.fillRect(Math.round(particle.x), Math.round(particle.y + this.cameraOffsetY), 2, 1);
+    }
+    for (const defeated of this.defeatedWalkers) {
+      defeated.sprite
+        .setPosition(Math.round(defeated.x), Math.round(defeated.y + this.cameraOffsetY))
+        .setRotation(defeated.rotation);
     }
     if (this.pulse > 0) {
       const max = this.settings.reducedMotion ? 0.04 : 0.2;
