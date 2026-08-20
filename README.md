@@ -1,6 +1,6 @@
 # birdddddd
 
-A one-button endless arcade game combining Flappy Bird's rapid obstacle loop with VVVVVV's gravity reversal. Guide a bedraggled fledgling through nine original pixel-fantasy biomes, reverse gravity without losing momentum, and collect feather chains for bonus points.
+A one-button endless arcade game combining Flappy Bird's rapid obstacle loop with VVVVVV's gravity reversal. Guide a bedraggled fledgling through ten pixel-fantasy biomes, reverse gravity without losing momentum, and collect feather chains for bonus points.
 
 ## Play
 
@@ -29,7 +29,7 @@ yarn build
 ```
 
 Open `http://localhost:5173`. Add `?seed=123` to reproduce a particular chunk sequence during testing.
-Use `?previewChapter=0` through `?previewChapter=8` to start directly in a chapter with its correct score and speed.
+Use `?previewChapter=0` through `?previewChapter=9` to start directly in a chapter with its correct score and speed.
 
 ## Cloudflare Workers deployment and embedding
 
@@ -63,11 +63,11 @@ No cross-origin API or CORS permission is required for the iframe. Best score, m
 - TypeScript and Vite static production build
 - 320×180 logical canvas with nearest-neighbour responsive scaling
 - Deterministic 60 Hz custom physics with momentum-preserving gravity flips
-- Fifty-four authored chunks across nine escalating chapters
-- Nine continuous tile-world biomes: Verdant Wilds, Underground Jungle, Sunken Dunes, Marble Cave, Violet Chasm, Underground Corruption, Abandoned Minecart, Ashen Depths, and Underworld
+- Sixty authored chunks across ten escalating chapters
+- Ten continuous tile-world biomes: Verdant Wilds, Underground Jungle, Mushroom Kingdom, Sunken Dunes, Marble Cave, Violet Chasm, Underground Corruption, Abandoned Minecart, Ashen Depths, and Underworld
 - Authored raster terrain, panorama, and prop atlases with optimized nearest-neighbour runtime copies; editable high-resolution sources live under `art/source`
 - Rising and falling tunnel profiles with persistent slope/pillar pushback and left-edge failure
-- Progressive biome challenges: swaying jungle vines, timed sand jets, marble crushers, crystal shards, corruption spores, rolling minecarts, ember wisps, and alternating Underworld flame vents
+- Progressive biome challenges: swaying jungle vines, Mushroom Kingdom plant and shell hazards, timed sand jets, marble crushers, crystal shards, corruption spores, rolling minecarts, ember wisps, and alternating Underworld flame vents
 - Compatibility metadata and discrete physics traversal checks for chunk transitions
 - Gate scoring, optional three-feather bonus chains, local best-score/settings persistence
 - Original authored raster environments, a code-drawn animated bird, and procedurally synthesized chiptune/SFX

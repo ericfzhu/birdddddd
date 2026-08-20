@@ -62,6 +62,7 @@ const DANGER_RED = 0xff1238;
 const BACKGROUND_ASSETS = [
   "biome-forest-far-background-v2-runtime.png",
   "biome-underground-jungle-background-runtime.png",
+  "biome-mushroom-kingdom-far-background-v2-runtime.png",
   "biome-desert-far-background-v2-runtime.png",
   "biome-marble-cave-background-runtime.png",
   "biome-violet-background-runtime.png",
@@ -70,9 +71,9 @@ const BACKGROUND_ASSETS = [
   "biome-ashen-background-runtime.png",
   "biome-underworld-background-runtime.png",
 ] as const;
-const NEW_ART_CHAPTERS = [1, 3, 5, 6, 8] as const;
-const NEW_ART_SLUGS = ["underground-jungle", "marble-cave", "underground-corruption", "abandoned-minecart", "underworld"] as const;
-const LEGACY_ATLAS_CHAPTER = new Map<number, number>([[0, 0], [2, 1], [4, 2], [7, 3]]);
+const NEW_ART_CHAPTERS = [1, 2, 4, 6, 7, 9] as const;
+const NEW_ART_SLUGS = ["underground-jungle", "mushroom-kingdom", "marble-cave", "underground-corruption", "abandoned-minecart", "underworld"] as const;
+const LEGACY_ATLAS_CHAPTER = new Map<number, number>([[0, 0], [3, 1], [5, 2], [8, 3]]);
 
 export class AviaryScene extends Phaser.Scene {
   model!: GameModel;
@@ -170,7 +171,7 @@ export class AviaryScene extends Phaser.Scene {
     const requestedSeed = Number(query.get("seed"));
     const requestedChapter = query.get("previewChapter");
     const requestedChunk = query.get("previewChunk") ?? undefined;
-    const previewChapter = requestedChapter === null ? (import.meta.env.DEV ? 1 : 0) : Number(requestedChapter);
+    const previewChapter = requestedChapter === null ? (import.meta.env.DEV ? 2 : 0) : Number(requestedChapter);
     const seed = Number.isFinite(requestedSeed) && requestedSeed > 0 ? requestedSeed >>> 0 : (Date.now() ^ 0x51a7e) >>> 0;
     this.model = new GameModel(
       seed,
@@ -657,7 +658,7 @@ export class AviaryScene extends Phaser.Scene {
   private drawTunnelRails(g: Phaser.GameObjects.Graphics, tunnel: VisibleTunnelPoint[], chapter: number, alpha: number): void {
     if (alpha <= 0 || tunnel.length < 2) return;
     const biome = BIOMES[chapter] ?? BIOMES[0];
-    const thickness = chapter === 4 || chapter === 8 ? 4 : 3;
+    const thickness = chapter === 5 || chapter === 9 ? 4 : 3;
     g.lineStyle(thickness, biome.surface, alpha);
     for (let index = 1; index < tunnel.length; index += 1) {
       const previous = tunnel[index - 1];
@@ -794,6 +795,15 @@ export class AviaryScene extends Phaser.Scene {
       return;
     }
     if (rect.chapter === 2) {
+      g.fillStyle(0xc75a24, 1);
+      g.fillRect(rect.x, rect.y, rect.w, rect.h);
+      g.fillStyle(biome.surface, 1);
+      g.fillRect(rect.x, rect.y, rect.w, 3);
+      g.fillStyle(biome.accent, 0.9);
+      for (let x = rect.x + 2; x < rect.x + rect.w - 2; x += 8) g.fillRect(x, rect.y + Math.max(3, rect.h - 3), 5, 2);
+      return;
+    }
+    if (rect.chapter === 3) {
       g.fillStyle(biome.surface, 1);
       g.fillRect(rect.x, rect.y, rect.w, rect.h);
       g.fillStyle(biome.accent, 0.9);
@@ -802,7 +812,7 @@ export class AviaryScene extends Phaser.Scene {
       for (let x = rect.x + 3; x < rect.x + rect.w - 2; x += 9) g.fillRect(x, rect.y + Math.max(2, rect.h - 3), 6, 2);
       return;
     }
-    if (rect.chapter === 4 || rect.chapter === 5) {
+    if (rect.chapter === 5 || rect.chapter === 6) {
       g.fillStyle(biome.terrain, 1);
       g.fillRect(rect.x, rect.y, rect.w, rect.h);
       g.fillStyle(biome.surface, 1);

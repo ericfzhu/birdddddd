@@ -130,7 +130,7 @@ const tunnelWave = (width: number, first: number, second: number): TunnelPoint[]
 
 const withTunnel = (definition: ChunkDefinition, tunnel: TunnelPoint[]): ChunkDefinition => ({ ...definition, tunnel });
 
-export const CHUNKS: readonly ChunkDefinition[] = [
+const PRE_MUSHROOM_CHUNKS: readonly ChunkDefinition[] = [
   // Verdant Wilds — wide, readable single decisions.
   chunk("nursery-low", 0, 210, [floorBarbs(72, 34, 20)], [{ x: 90, y: 72 }]),
   chunk("nursery-high", 0, 210, [ceilingBarbs(76, 36, 20)], [{ x: 94, y: 110 }]),
@@ -204,15 +204,33 @@ export const CHUNKS: readonly ChunkDefinition[] = [
   chunk("underworld-throne", 8, 280, [{ x: 88, y: 30, w: 10, h: 54, kind: "shutter", attachment: "floating", motion: { amplitude: 18, frequency: 0.46 } }, spinner(174, 78, 20, { amplitude: 31, frequency: 0.4 }), { x: 238, y: 96, w: 10, h: 54, kind: "shutter", attachment: "floating", motion: { amplitude: 18, frequency: 0.43, phase: 0.5 } }], featherArc([[104, 118], [154, 90], [212, 60]]), [], ANY, ANY, "underworld"),
 ] as const;
 
+const MUSHROOM_CHUNKS: readonly ChunkDefinition[] = [
+  chunk("mushroom-pipe-gates", 2, 240, [floorBarbs(184, 28, 22)], featherArc([[74, 62], [126, 90], [194, 116]]), [cagePillar(104, PLAY_TOP, 52), cagePillar(104, 114, PLAY_BOTTOM - 114)], ANY, ANY, "mushroom"),
+  chunk("mushroom-brick-hop", 2, 240, [ceilingBarbs(188, 28, 22)], featherArc([[72, 116], [126, 92], [190, 62]]), [perch(64, 118, 42), perch(128, 66, 42)], ANY, TOP, "mushroom"),
+  withTunnel(chunk("mushroom-green-hills", 2, 250, [bottomThorns(62, 26, 21), topThorns(194, 26, 21)], featherArc([[80, 62], [142, 92], [210, 116]]), [], ANY, ANY, "mushroom"), tunnelDip(250, 30)),
+  withTunnel(chunk("mushroom-block-arc", 2, 250, [topThorns(58, 24, 21), bottomThorns(126, 24, 21), topThorns(198, 24, 21)], featherArc([[74, 116], [144, 62], [214, 114]]), [], ANY, ANY, "mushroom"), tunnelDip(250, -30)),
+  chunk("mushroom-castle-road", 2, 250, [floorBarbs(206, 26, 22)], featherArc([[82, 116], [144, 64], [216, 110]]), [cagePillar(72, PLAY_TOP, 54), cagePillar(138, 110, PLAY_BOTTOM - 110), cagePillar(198, PLAY_TOP, 54)], ANY, ANY, "mushroom"),
+  withTunnel(chunk("mushroom-warp-way", 2, 260, [ceilingBarbs(54, 24, 22), floorBarbs(138, 26, 22), ceilingBarbs(218, 24, 22)], featherArc([[72, 116], [156, 62], [232, 112]]), [perch(92, 112, 38)], ANY, ANY, "mushroom"), tunnelWave(260, 26, -25)),
+] as const;
+
+export const CHUNKS: readonly ChunkDefinition[] = [
+  ...PRE_MUSHROOM_CHUNKS.filter((definition) => definition.chapter < 2),
+  ...MUSHROOM_CHUNKS,
+  ...PRE_MUSHROOM_CHUNKS
+    .filter((definition) => definition.chapter >= 2)
+    .map((definition) => ({ ...definition, chapter: definition.chapter + 1 })),
+];
+
 export const TRANSITION_CHUNKS: readonly ChunkDefinition[] = [
   chunk("passage-verdant-jungle", 1, 190, [], [], [], ANY, ANY, "passage"),
-  chunk("passage-jungle-dunes", 2, 190, [], [], [], ANY, ANY, "passage"),
-  chunk("passage-dunes-marble", 3, 190, [], [], [], ANY, ANY, "passage"),
-  chunk("passage-marble-violet", 4, 190, [], [], [], ANY, ANY, "passage"),
-  chunk("passage-violet-corruption", 5, 190, [], [], [], ANY, ANY, "passage"),
-  chunk("passage-corruption-minecart", 6, 190, [], [], [], ANY, ANY, "passage"),
-  chunk("passage-minecart-ashen", 7, 190, [], [], [], ANY, ANY, "passage"),
-  chunk("passage-ashen-underworld", 8, 190, [], [], [], ANY, ANY, "passage"),
+  chunk("passage-jungle-mushroom", 2, 190, [], [], [], ANY, ANY, "passage"),
+  chunk("passage-mushroom-dunes", 3, 190, [], [], [], ANY, ANY, "passage"),
+  chunk("passage-dunes-marble", 4, 190, [], [], [], ANY, ANY, "passage"),
+  chunk("passage-marble-violet", 5, 190, [], [], [], ANY, ANY, "passage"),
+  chunk("passage-violet-corruption", 6, 190, [], [], [], ANY, ANY, "passage"),
+  chunk("passage-corruption-minecart", 7, 190, [], [], [], ANY, ANY, "passage"),
+  chunk("passage-minecart-ashen", 8, 190, [], [], [], ANY, ANY, "passage"),
+  chunk("passage-ashen-underworld", 9, 190, [], [], [], ANY, ANY, "passage"),
 ].map((definition, index) => ({
   ...definition,
   transition: { from: index, to: index + 1 },

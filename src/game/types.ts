@@ -76,6 +76,7 @@ export interface ChunkDefinition {
   decoration:
     | "forest"
     | "jungle"
+    | "mushroom"
     | "desert"
     | "marble"
     | "blight"

@@ -25,6 +25,7 @@ export type VerdantParallaxState = LayeredParallaxState;
 export const PARALLAX_BIOME_SLUGS = [
   "forest",
   "underground-jungle",
+  "mushroom-kingdom",
   "desert",
   "marble-cave",
   "violet",
@@ -37,6 +38,7 @@ export const PARALLAX_BIOME_SLUGS = [
 const PARALLAX_RATES: readonly ParallaxRates[] = [
   { farX: 0.025, farY: 0.1, midX: 0.05, midY: 0.16, nearX: 0.075, nearY: 0.22 },
   { farX: 0.014, farY: 0.07, midX: 0.038, midY: 0.13, nearX: 0.07, nearY: 0.22 },
+  { farX: 0.02, farY: 0.08, midX: 0.046, midY: 0.14, nearX: 0.078, nearY: 0.21 },
   { farX: 0.018, farY: 0.08, midX: 0.045, midY: 0.14, nearX: 0.08, nearY: 0.22 },
   { farX: 0.012, farY: 0.06, midX: 0.032, midY: 0.11, nearX: 0.064, nearY: 0.18 },
   { farX: 0.016, farY: 0.08, midX: 0.042, midY: 0.14, nearX: 0.074, nearY: 0.22 },
@@ -83,5 +85,5 @@ export function verdantParallaxState(distance: number, cameraOffsetY: number, re
 }
 
 export function desertParallaxState(distance: number, cameraOffsetY: number, reducedMotion: boolean): LayeredParallaxState {
-  return biomeParallaxState(2, distance, cameraOffsetY, reducedMotion);
+  return biomeParallaxState(3, distance, cameraOffsetY, reducedMotion);
 }

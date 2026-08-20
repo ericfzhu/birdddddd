@@ -56,8 +56,8 @@ const activate = (definition: ChunkDefinition, startX = 0): ActiveChunk => ({
 
 describe("birdddddd model", () => {
   it("can place a requested authored chunk first for direct test-ground previews", () => {
-    const model = new GameModel(123, 0, 2, "clock-perches");
-    expect(model.chapter).toBe(2);
+    const model = new GameModel(123, 0, 3, "clock-perches");
+    expect(model.chapter).toBe(3);
     expect(model.chunks[0]?.definition.id).toBe("clock-perches");
     expect(model.chunks[0]?.startX).toBe(130);
   });
@@ -135,6 +135,7 @@ describe("birdddddd model", () => {
     expect(CHAPTERS.map((chapter) => chapter.name)).toEqual([
       "VERDANT WILDS",
       "UNDERGROUND JUNGLE",
+      "MUSHROOM KINGDOM",
       "SUNKEN DUNES",
       "MARBLE CAVE",
       "VIOLET CHASM",
@@ -144,10 +145,29 @@ describe("birdddddd model", () => {
       "UNDERWORLD",
     ]);
     expect(new Set(BIOMES.map((biome) => biome.sky)).size).toBe(CHAPTERS.length);
-    const decorations = ["forest", "jungle", "desert", "marble", "blight", "corruption", "minecart", "depths", "underworld"] as const;
+    const decorations = ["forest", "jungle", "mushroom", "desert", "marble", "blight", "corruption", "minecart", "depths", "underworld"] as const;
     for (let chapter = 0; chapter < decorations.length; chapter += 1) {
       expect(new Set(CHUNKS.filter((chunk) => chunk.chapter === chapter).map((chunk) => chunk.decoration))).toEqual(new Set([decorations[chapter]]));
     }
+  });
+
+  it("inserts Mushroom Kingdom third and shifts every later chapter intact", () => {
+    expect(CHAPTERS).toHaveLength(10);
+    expect(CHAPTERS.map((chapter) => chapter.at)).toEqual([0, 8, 18, 30, 44, 60, 78, 98, 120, 144]);
+    expect(CHUNKS.filter((chunk) => chunk.chapter === 2).map((chunk) => chunk.id)).toEqual([
+      "mushroom-pipe-gates",
+      "mushroom-brick-hop",
+      "mushroom-green-hills",
+      "mushroom-block-arc",
+      "mushroom-castle-road",
+      "mushroom-warp-way",
+    ]);
+    expect(CHUNKS.find((chunk) => chunk.id === "clock-low-high")?.chapter).toBe(3);
+    expect(CHUNKS.find((chunk) => chunk.id === "underworld-forge")?.chapter).toBe(9);
+    expect(INTERACTIVE_ART[2]?.slug).toBe("mushroom-kingdom");
+    expect(INTERACTIVE_ART[2]?.emphasis?.pillarWidthBonus).toBe(8);
+    expect(transitionArtFor(1, 2)?.slug).toBe("jungle-mushroom");
+    expect(transitionArtFor(2, 3)?.slug).toBe("mushroom-dunes");
   });
 
   it("authors hazards across both surfaces plus static and moving open air", () => {
@@ -162,13 +182,13 @@ describe("birdddddd model", () => {
   it("introduces a distinct hazard language as chapters progress", () => {
     const expectedKinds = new Map<number, string[]>([
       [1, ["vine"]],
-      [2, ["sandJet"]],
-      [3, ["crusher"]],
-      [4, ["crystal"]],
-      [5, ["spore"]],
-      [6, ["cart"]],
-      [7, ["ember"]],
-      [8, ["flame"]],
+      [3, ["sandJet"]],
+      [4, ["crusher"]],
+      [5, ["crystal"]],
+      [6, ["spore"]],
+      [7, ["cart"]],
+      [8, ["ember"]],
+      [9, ["flame"]],
     ]);
     for (const [chapter, kinds] of expectedKinds) {
       const authored = new Set(CHUNKS.filter((chunk) => chunk.chapter === chapter).flatMap((chunk) => chunk.hazards.map((hazard) => hazard.kind)));
@@ -202,21 +222,21 @@ describe("birdddddd model", () => {
   });
 
   it("renders the desert sand jet from separate reusable nozzle and lethal plume assets", () => {
-    const desertArt = INTERACTIVE_ART[2];
+    const desertArt = INTERACTIVE_ART[3];
     expect(desertArt?.assets).toEqual(expect.arrayContaining(["sandjet", "sandjet-nozzle"]));
-    expect(authoredAssetForHazard(2, "sandJet")).toBe("sandjet");
+    expect(authoredAssetForHazard(3, "sandJet")).toBe("sandjet");
     expect(Object.values(desertArt?.hazards ?? {})).not.toContain("sandjet-nozzle");
   });
 
   it("renders Underworld flames from a persistent vent and separate lethal plume", () => {
-    const underworldArt = INTERACTIVE_ART[8];
+    const underworldArt = INTERACTIVE_ART[9];
     expect(underworldArt?.assets).toEqual(expect.arrayContaining(["flame-plume", "flame-warning"]));
-    expect(authoredAssetForHazard(8, "flame")).toBe("flame-plume");
+    expect(authoredAssetForHazard(9, "flame")).toBe("flame-plume");
     expect(Object.values(underworldArt?.hazards ?? {})).not.toContain("flame-warning");
   });
 
   it("gives Minecart's narrow machinery stronger visual emphasis without changing collision data", () => {
-    const minecartArt = INTERACTIVE_ART[6];
+    const minecartArt = INTERACTIVE_ART[7];
     expect(minecartArt?.emphasis).toMatchObject({
       spikeWidthBonus: 4,
       pillarWidthBonus: 8,
@@ -231,7 +251,7 @@ describe("birdddddd model", () => {
   });
 
   it("provides authored dressing for every remaining chapter passage", () => {
-    const remaining = TRANSITION_CHUNKS.filter((chunk) => (chunk.transition?.from ?? -1) >= 2);
+    const remaining = TRANSITION_CHUNKS.filter((chunk) => (chunk.transition?.from ?? -1) >= 1);
     expect(TRANSITION_ART).toHaveLength(remaining.length);
     for (const chunk of remaining) {
       const transition = chunk.transition;
@@ -601,22 +621,22 @@ describe("birdddddd model", () => {
       expect(layout.visibleLeft).toBeLessThan(layout.visibleRight);
     }
 
-    const minecart = propLayout(6);
+    const minecart = propLayout(7);
     expect(minecart.displayWidth).toBe(54);
     expect(minecart.displayHeight).toBeCloseTo(35.86, 2);
     expect(minecart.originY).toBeCloseTo(80 / 85, 5);
 
-    const marble = propLayout(3);
+    const marble = propLayout(4);
     expect(marble.displayWidth).toBeCloseTo(45.75, 2);
     expect(marble.displayHeight).toBe(48);
     expect(marble.originY).toBeCloseTo(122 / 128, 5);
 
-    const corruption = propLayout(5);
+    const corruption = propLayout(6);
     expect(corruption.originY).toBeCloseTo(117 / 128, 5);
   });
 
   it("aligns wide foreground props to slopes without burying the uphill side", () => {
-    const layout = propLayout(6);
+    const layout = propLayout(7);
     const slope = 0.35;
     const placement = propGroundPlacement(layout, (x) => 150 + x * slope);
     expect(placement).toBeDefined();
@@ -636,7 +656,7 @@ describe("birdddddd model", () => {
   });
 
   it("keeps prop placement fixed at its authored world anchor as the camera advances", () => {
-    const layout = propLayout(6);
+    const layout = propLayout(7);
     const anchorWorldX = 420;
     const floorAtWorldX = (worldX: number) => 150 + (worldX - anchorWorldX) * 0.3;
     const beforeEntryScreenX = anchorWorldX - 80;

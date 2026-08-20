@@ -50,6 +50,16 @@ export const BIOMES = [
     glow: 0xf0bd58,
   },
   {
+    sky: 0x238fe5,
+    far: 0x69bfee,
+    terrain: 0xa76722,
+    terrainDark: 0x6f361d,
+    surface: 0x55ba2d,
+    accent: 0xf5c542,
+    danger: 0xd9363e,
+    glow: 0xffee8a,
+  },
+  {
     sky: 0xd99b5d,
     far: 0xb56b43,
     terrain: 0x8b5836,
@@ -124,13 +134,14 @@ export const BIOMES = [
 export const CHAPTERS = [
   { id: 0, name: "VERDANT WILDS", speed: 80, at: 0, shade: BIOMES[0].sky },
   { id: 1, name: "UNDERGROUND JUNGLE", speed: 84, at: 8, shade: BIOMES[1].sky },
-  { id: 2, name: "SUNKEN DUNES", speed: 88, at: 18, shade: BIOMES[2].sky },
-  { id: 3, name: "MARBLE CAVE", speed: 92, at: 30, shade: BIOMES[3].sky },
-  { id: 4, name: "VIOLET CHASM", speed: 96, at: 44, shade: BIOMES[4].sky },
-  { id: 5, name: "UNDERGROUND CORRUPTION", speed: 99, at: 60, shade: BIOMES[5].sky },
-  { id: 6, name: "ABANDONED MINECART", speed: 101, at: 78, shade: BIOMES[6].sky },
-  { id: 7, name: "ASHEN DEPTHS", speed: 104, at: 98, shade: BIOMES[7].sky },
-  { id: 8, name: "UNDERWORLD", speed: 104, at: 120, shade: BIOMES[8].sky },
+  { id: 2, name: "MUSHROOM KINGDOM", speed: 88, at: 18, shade: BIOMES[2].sky },
+  { id: 3, name: "SUNKEN DUNES", speed: 92, at: 30, shade: BIOMES[3].sky },
+  { id: 4, name: "MARBLE CAVE", speed: 96, at: 44, shade: BIOMES[4].sky },
+  { id: 5, name: "VIOLET CHASM", speed: 99, at: 60, shade: BIOMES[5].sky },
+  { id: 6, name: "UNDERGROUND CORRUPTION", speed: 101, at: 78, shade: BIOMES[6].sky },
+  { id: 7, name: "ABANDONED MINECART", speed: 104, at: 98, shade: BIOMES[7].sky },
+  { id: 8, name: "ASHEN DEPTHS", speed: 104, at: 120, shade: BIOMES[8].sky },
+  { id: 9, name: "UNDERWORLD", speed: 104, at: 144, shade: BIOMES[9].sky },
 ] as const;
 
 export function chapterForGates(gates: number): number {

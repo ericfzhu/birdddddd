@@ -43,6 +43,12 @@ export const INTERACTIVE_ART: readonly InteractiveArtFamily[] = [
   { slug: "forest", assets: common, hazards: { thorns: "thorn", barbs: "barb" } },
   { slug: "underground-jungle", assets: [...common, "vine"], hazards: { thorns: "thorn", barbs: "barb", vine: "vine" } },
   {
+    slug: "mushroom-kingdom",
+    assets: common,
+    hazards: { thorns: "thorn", barbs: "barb" },
+    emphasis: { pillarWidthBonus: 8 },
+  },
+  {
     slug: "desert",
     assets: [...common, "sandjet", "sandjet-nozzle", "spinner"],
     hazards: { thorns: "thorn", barbs: "barb", sandJet: "sandjet", spinner: "spinner" },
@@ -66,12 +72,14 @@ export const INTERACTIVE_ART: readonly InteractiveArtFamily[] = [
 ] as const;
 
 export const TRANSITION_ART: readonly TransitionArt[] = [
-  { from: 2, to: 3, slug: "dunes-marble" },
-  { from: 3, to: 4, slug: "marble-violet" },
-  { from: 4, to: 5, slug: "violet-corruption" },
-  { from: 5, to: 6, slug: "corruption-minecart" },
-  { from: 6, to: 7, slug: "minecart-ashen" },
-  { from: 7, to: 8, slug: "ashen-underworld" },
+  { from: 1, to: 2, slug: "jungle-mushroom" },
+  { from: 2, to: 3, slug: "mushroom-dunes" },
+  { from: 3, to: 4, slug: "dunes-marble" },
+  { from: 4, to: 5, slug: "marble-violet" },
+  { from: 5, to: 6, slug: "violet-corruption" },
+  { from: 6, to: 7, slug: "corruption-minecart" },
+  { from: 7, to: 8, slug: "minecart-ashen" },
+  { from: 8, to: 9, slug: "ashen-underworld" },
 ] as const;
 
 export function interactiveTextureKey(chapter: number, asset: InteractiveAssetKind): string {
