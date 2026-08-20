@@ -12,6 +12,8 @@ export type HazardKind =
   | "crystal"
   | "spore"
   | "cart"
+  | "walker"
+  | "wingedShell"
   | "ember"
   | "flame";
 export type HazardAttachment = "ceiling" | "floor" | "floating";
@@ -121,6 +123,7 @@ export interface VisibleRect extends RectSpec {
   flipY?: boolean;
   active?: boolean;
   cycleProgress?: number;
+  motionDirectionX?: -1 | 1;
   chapter: number;
   decoration: ChunkDefinition["decoration"];
 }

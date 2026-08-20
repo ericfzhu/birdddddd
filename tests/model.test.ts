@@ -166,6 +166,12 @@ describe("birdddddd model", () => {
     expect(CHUNKS.find((chunk) => chunk.id === "underworld-forge")?.chapter).toBe(9);
     expect(INTERACTIVE_ART[2]?.slug).toBe("mushroom-kingdom");
     expect(INTERACTIVE_ART[2]?.emphasis?.pillarWidthBonus).toBe(8);
+    expect(INTERACTIVE_ART[2]?.assets).toEqual(expect.arrayContaining(["walker", "walker-step", "winged-shell"]));
+    expect(authoredAssetForHazard(2, "walker")).toBe("walker");
+    expect(authoredAssetForHazard(2, "wingedShell")).toBe("winged-shell");
+    const mushroomHazards = CHUNKS.filter((chunk) => chunk.chapter === 2).flatMap((chunk) => chunk.hazards);
+    expect(mushroomHazards.find((hazard) => hazard.kind === "walker")?.motion?.axis).toBe("x");
+    expect(mushroomHazards.find((hazard) => hazard.kind === "wingedShell")?.motion?.axis).toBe("y");
     expect(propLayout(2).originY).toBe(1);
     expect(transitionArtFor(1, 2)?.slug).toBe("jungle-mushroom");
     expect(transitionArtFor(2, 3)?.slug).toBe("mushroom-dunes");
@@ -183,6 +189,7 @@ describe("birdddddd model", () => {
   it("introduces a distinct hazard language as chapters progress", () => {
     const expectedKinds = new Map<number, string[]>([
       [1, ["vine"]],
+      [2, ["walker", "wingedShell"]],
       [3, ["sandJet"]],
       [4, ["crusher"]],
       [5, ["crystal"]],
@@ -406,6 +413,33 @@ describe("birdddddd model", () => {
     expect(shifted?.y).toBe(start?.y);
   });
 
+  it("keeps walking hazards seated on the terrain while they patrol across a slope", () => {
+    const walkerChunk: ChunkDefinition = {
+      ...safeChunk(),
+      id: "test-slope-walker",
+      tunnel: [{ x: 0, y: 0 }, { x: 200, y: 40 }],
+      hazards: [{
+        x: 80,
+        y: PLAY_BOTTOM - 16,
+        w: 18,
+        h: 16,
+        kind: "walker",
+        attachment: "floor",
+        motion: { amplitude: 20, frequency: 0.25, axis: "x" },
+      }],
+    };
+    const model = new GameModel(93);
+    model.chunks = [activate(walkerChunk)];
+    const start = model.visibleRects()[0];
+    expect(start?.motionDirectionX).toBe(1);
+    model.simTime = 1;
+    const shifted = model.visibleRects()[0];
+    expect(shifted?.x).toBeCloseTo((start?.x ?? 0) + 20, 5);
+    expect(shifted?.y).toBeCloseTo((start?.y ?? 0) + 4, 5);
+    model.simTime = 2;
+    expect(model.visibleRects()[0]?.motionDirectionX).toBe(-1);
+  });
+
   it("authors rising and falling tunnel sections that return to compatible flat entrances", () => {
     const tunnelChunks = CHUNKS.filter((chunk) => chunk.tunnel);
     expect(tunnelChunks.length).toBeGreaterThanOrEqual(8);
@@ -592,6 +626,18 @@ describe("birdddddd model", () => {
       hazards: [{ x: PLAYER_X, y: model.playerY - 5, w: 12, h: 12, kind: "spinner", attachment: "floating" }],
     };
     model.chunks = [activate(spinnerChunk)];
+    model.mode = "playing";
+    model.step();
+    expect(model.mode).toBe("dead");
+  });
+
+  it.each(["walker", "wingedShell"] as const)("treats Mushroom Kingdom %s enemies as lethal", (kind) => {
+    const model = new GameModel(kind === "walker" ? 811 : 812);
+    const enemyChunk: ChunkDefinition = {
+      ...safeChunk(),
+      hazards: [{ x: PLAYER_X - 6, y: model.playerY - 6, w: 12, h: 12, kind, attachment: "floating" }],
+    };
+    model.chunks = [activate(enemyChunk)];
     model.mode = "playing";
     model.step();
     expect(model.mode).toBe("dead");

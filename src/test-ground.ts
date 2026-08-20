@@ -13,6 +13,9 @@ const FRIENDLY_ASSET_NAMES: Partial<Record<InteractiveAssetKind, string>> = {
   pillar: "Gate pillar",
   thorn: "Terrain spikes",
   barb: "Heavy spikes",
+  walker: "Mushroom walker",
+  "walker-step": "Walker step frame",
+  "winged-shell": "Winged shell",
   sandjet: "Sand plume",
   "sandjet-nozzle": "Sand nozzle",
   "flame-warning": "Flame warning",
@@ -38,6 +41,7 @@ function terrainLabel(chunk: ChunkDefinition): string {
 function hazardKindForAsset(chapter: number, asset: InteractiveAssetKind): HazardKind | undefined {
   if (asset === "sandjet-nozzle") return "sandJet";
   if (asset === "flame-warning") return "flame";
+  if (asset === "walker-step") return "walker";
   const hazards = INTERACTIVE_ART[chapter]?.hazards;
   if (!hazards) return undefined;
   return (Object.entries(hazards) as Array<[HazardKind, InteractiveAssetKind]>).find(([, value]) => value === asset)?.[0];

@@ -157,7 +157,7 @@ export class AviaryScene extends Phaser.Scene {
     const dangerColor = `#${DANGER_RED.toString(16).padStart(6, "0")}`;
     INTERACTIVE_ART.forEach((family, chapter) => {
       for (const asset of family.assets) {
-        if (!Object.values(family.hazards).includes(asset)) continue;
+        if (!Object.values(family.hazards).includes(asset) && asset !== "walker-step") continue;
         this.createSolidSilhouetteTexture(
           interactiveTextureKey(chapter, asset),
           interactiveDangerTextureKey(chapter, asset),
@@ -1003,14 +1003,19 @@ export class AviaryScene extends Phaser.Scene {
 
       const asset = authoredAssetForHazard(rect.chapter, rect.kind);
       if (!asset) continue;
-      const texture = interactiveTextureKey(rect.chapter, asset);
+      const renderAsset = rect.kind === "walker"
+        && !this.settings.reducedMotion
+        && Math.floor(this.model.simTime * 8) % 2 === 1
+        ? "walker-step"
+        : asset;
+      const texture = interactiveTextureKey(rect.chapter, renderAsset);
       const centerX = Math.round(rect.x + rect.w / 2);
       const centerY = Math.round(rect.y + rect.h / 2);
       const firstSprite = takeSprite(texture);
       if (!firstSprite) continue;
       const warningSprite = rect.active === false
         ? undefined
-        : firstSprite.setTexture(interactiveDangerTextureKey(rect.chapter, asset));
+        : firstSprite.setTexture(interactiveDangerTextureKey(rect.chapter, renderAsset));
       const sprite = warningSprite ? takeSprite(texture) : firstSprite;
       if (!sprite) {
         warningSprite?.setVisible(false);
@@ -1024,6 +1029,22 @@ export class AviaryScene extends Phaser.Scene {
         sprite.setOrigin(0.5, 0.5).setDisplaySize(width, rect.h + 4).setPosition(centerX, centerY);
       } else if (rect.kind === "beak") {
         sprite.setOrigin(0.5, 0.5).setDisplaySize(rect.w + 4, rect.h + 3).setPosition(centerX, centerY).setFlipY(rect.flipY === true);
+      } else if (rect.kind === "walker") {
+        sprite
+          .setOrigin(0.5, 1)
+          .setDisplaySize(rect.w + 4, rect.h + 4)
+          .setPosition(centerX, Math.round(rect.y + rect.h + 1))
+          .setFlipX(rect.motionDirectionX === 1);
+      } else if (rect.kind === "wingedShell") {
+        sprite
+          .setOrigin(0.5, 0.5)
+          .setDisplaySize(rect.w + 7, rect.h + 8)
+          .setPosition(centerX, centerY);
+        if (!this.settings.reducedMotion) {
+          const wingBeat = 1 + Math.sin(this.uiTime * 13) * 0.055;
+          sprite.setScale(sprite.scaleX, sprite.scaleY * wingBeat);
+          sprite.setRotation(Math.sin(this.uiTime * 5) * 0.035);
+        }
       } else {
         sprite
           .setOrigin(0.5, 0.5)

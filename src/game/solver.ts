@@ -60,13 +60,13 @@ function hazardIsActive(hazard: HazardSpec, time: number, phaseOffset: number): 
   return progress < hazard.cycle.activeRatio;
 }
 
-function collidesHazard(state: SolverState, progress: number, hazard: HazardSpec, time: number, phaseOffset: number, tunnelOffset: number): boolean {
+function collidesHazard(state: SolverState, progress: number, hazard: HazardSpec, time: number, phaseOffset: number, definition: ChunkDefinition): boolean {
   if (!hazardIsActive(hazard, time, phaseOffset)) return false;
   const motion = motionOffset(hazard, time, phaseOffset);
   const x = hazard.x + motion.x;
   const horizontal = progress + halfW > x && progress - halfW < x + hazard.w;
   if (!horizontal) return false;
-  const y = hazard.y + tunnelOffset + motion.y;
+  const y = hazard.y + tunnelOffsetAt(definition, x + hazard.w / 2) + motion.y;
   return state.y + halfH > y && state.y - halfH < y + hazard.h;
 }
 
@@ -149,7 +149,7 @@ export function canTraverseChunk(
           hazard,
           time,
           phaseOffset,
-          tunnelOffsetAt(definition, hazard.x + hazard.w / 2),
+          definition,
         ))) continue;
         next.set(stateKey(state), state);
       }

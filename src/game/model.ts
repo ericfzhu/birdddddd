@@ -193,8 +193,9 @@ export class GameModel {
       }
       for (const hazard of active.definition.hazards) {
         const motion = this.motionOffset(hazard);
+        const motionDirectionX = this.motionDirectionX(hazard);
         const x = origin + hazard.x + motion.x;
-        const tunnelOffset = tunnelOffsetAt(active.definition, hazard.x + hazard.w / 2);
+        const tunnelOffset = tunnelOffsetAt(active.definition, hazard.x + motion.x + hazard.w / 2);
         if (x < VIEW_WIDTH + 20 && x + hazard.w > -20) {
           rects.push({
             ...hazard,
@@ -205,6 +206,7 @@ export class GameModel {
             decoration: active.definition.decoration,
             active: hazard.cycle ? this.hazardIsActive(hazard) : undefined,
             cycleProgress: hazard.cycle ? this.hazardCycleProgress(hazard) : undefined,
+            motionDirectionX,
           });
         }
       }
@@ -319,7 +321,7 @@ export class GameModel {
       tunnel: this.tunnelBoundsAtWorldX(this.distance + this.playerX),
       transition: this.chapterTransition(),
       restartReady: this.mode === "dead" && this.deathTimer >= RESTART_DELAY_SECONDS,
-      hazards: visibleHazards.map(({ x, y, w, h, kind, active, cycleProgress }) => ({
+      hazards: visibleHazards.map(({ x, y, w, h, kind, active, cycleProgress, motionDirectionX }) => ({
         x: Math.round(x),
         y: Math.round(y),
         w,
@@ -327,6 +329,7 @@ export class GameModel {
         kind,
         ...(active === undefined ? {} : { active }),
         ...(cycleProgress === undefined ? {} : { cycleProgress: Number(cycleProgress.toFixed(2)) }),
+        ...(motionDirectionX === undefined ? {} : { motionDirectionX }),
       })),
       solids: visibleSolids.map(({ x, y, w, h, detail }) => ({ x: Math.round(x), y: Math.round(y), w, h, detail })),
       feathers: this.visibleFeathers().filter((item) => !item.collected).slice(0, 6).map((item) => ({ x: Math.round(item.x), y: item.y })),
@@ -487,8 +490,8 @@ export class GameModel {
     for (const active of this.chunks) {
       const origin = active.startX - this.distance;
       for (const hazard of active.definition.hazards) {
-        const tunnelOffset = tunnelOffsetAt(active.definition, hazard.x + hazard.w / 2);
         const motion = this.motionOffset(hazard);
+        const tunnelOffset = tunnelOffsetAt(active.definition, hazard.x + motion.x + hazard.w / 2);
         if (!this.hazardIsActive(hazard)) continue;
         const terrainSpike = hazard.kind === "thorns" || hazard.kind === "barbs";
         const sandJet = hazard.kind === "sandJet";
@@ -634,6 +637,13 @@ export class GameModel {
     const phase = hazard.motion.phase ?? 0;
     const offset = Math.sin((this.simTime * hazard.motion.frequency + phase) * Math.PI * 2) * hazard.motion.amplitude;
     return hazard.motion.axis === "x" ? { x: offset, y: 0 } : { x: 0, y: offset };
+  }
+
+  private motionDirectionX(hazard: HazardSpec): -1 | 1 | undefined {
+    if (!hazard.motion || hazard.motion.axis !== "x") return undefined;
+    const phase = hazard.motion.phase ?? 0;
+    const velocity = Math.cos((this.simTime * hazard.motion.frequency + phase) * Math.PI * 2);
+    return velocity >= 0 ? 1 : -1;
   }
 
   private hazardCycleProgress(hazard: HazardSpec): number {

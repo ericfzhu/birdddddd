@@ -78,6 +78,16 @@ const minecart = (x: number, phase = 0): HazardSpec => ({
   motion: { amplitude: 32, frequency: 0.32, phase, axis: "x" },
 });
 
+const mushroomWalker = (x: number, phase = 0): HazardSpec => ({
+  x, y: PLAY_BOTTOM - 16, w: 18, h: 16, kind: "walker", attachment: "floor",
+  motion: { amplitude: 20, frequency: 0.2, phase, axis: "x" },
+});
+
+const wingedShell = (x: number, y: number, phase = 0): HazardSpec => ({
+  x, y, w: 22, h: 16, kind: "wingedShell", attachment: "floating",
+  motion: { amplitude: 22, frequency: 0.26, phase, axis: "y" },
+});
+
 const ember = (x: number, y: number, phase = 0): HazardSpec => ({
   x, y, w: 15, h: 15, kind: "ember", attachment: "floating",
   motion: { amplitude: 25, frequency: 0.33, phase },
@@ -205,10 +215,10 @@ const PRE_MUSHROOM_CHUNKS: readonly ChunkDefinition[] = [
 ] as const;
 
 const MUSHROOM_CHUNKS: readonly ChunkDefinition[] = [
-  chunk("mushroom-pipe-gates", 2, 240, [floorBarbs(184, 28, 22)], featherArc([[74, 62], [126, 90], [194, 116]]), [cagePillar(104, PLAY_TOP, 52), cagePillar(104, 114, PLAY_BOTTOM - 114)], ANY, ANY, "mushroom"),
+  chunk("mushroom-pipe-gates", 2, 240, [wingedShell(146, 70, 0.12), floorBarbs(194, 28, 22)], featherArc([[74, 62], [126, 104], [202, 116]]), [cagePillar(104, PLAY_TOP, 52), cagePillar(104, 114, PLAY_BOTTOM - 114)], ANY, ANY, "mushroom"),
   chunk("mushroom-brick-hop", 2, 240, [ceilingBarbs(188, 28, 22)], featherArc([[72, 116], [126, 92], [190, 62]]), [perch(64, 118, 42), perch(128, 66, 42)], ANY, TOP, "mushroom"),
   withTunnel(chunk("mushroom-green-hills", 2, 250, [bottomThorns(62, 26, 21), topThorns(194, 26, 21)], featherArc([[80, 62], [142, 92], [210, 116]]), [], ANY, ANY, "mushroom"), tunnelDip(250, 30)),
-  withTunnel(chunk("mushroom-block-arc", 2, 250, [topThorns(58, 24, 21), bottomThorns(126, 24, 21), topThorns(198, 24, 21)], featherArc([[74, 116], [144, 62], [214, 114]]), [], ANY, ANY, "mushroom"), tunnelDip(250, -30)),
+  withTunnel(chunk("mushroom-block-arc", 2, 250, [topThorns(58, 24, 21), mushroomWalker(132, 0.35), topThorns(198, 24, 21)], featherArc([[74, 116], [144, 62], [214, 114]]), [], ANY, ANY, "mushroom"), tunnelDip(250, -30)),
   chunk("mushroom-castle-road", 2, 250, [floorBarbs(206, 26, 22)], featherArc([[82, 116], [144, 64], [216, 110]]), [cagePillar(72, PLAY_TOP, 54), cagePillar(138, 110, PLAY_BOTTOM - 110), cagePillar(198, PLAY_TOP, 54)], ANY, ANY, "mushroom"),
   withTunnel(chunk("mushroom-warp-way", 2, 260, [ceilingBarbs(54, 24, 22), floorBarbs(138, 26, 22), ceilingBarbs(218, 24, 22)], featherArc([[72, 116], [156, 62], [232, 112]]), [perch(92, 112, 38)], ANY, ANY, "mushroom"), tunnelWave(260, 26, -25)),
 ] as const;
