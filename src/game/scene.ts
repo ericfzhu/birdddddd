@@ -18,7 +18,7 @@ import {
   VIEW_WIDTH,
 } from "./constants";
 import { sandJetVisualLayout, spikeClusterLayout, spikeRotationForNormal } from "./hazards";
-import { desertParallaxState, verdantParallaxState, type ParallaxCrop } from "./parallax";
+import { biomeParallaxState, PARALLAX_BIOME_SLUGS, type ParallaxCrop } from "./parallax";
 import { propGroundPlacementAtWorldX, propLayout } from "./props";
 import { dangerOutlineDisplaySize, screenXAtRenderDistance, snappedRenderDistance } from "./rendering";
 import {
@@ -79,10 +79,8 @@ export class AviaryScene extends Phaser.Scene {
   private settings!: StoredSettings;
   private background!: Phaser.GameObjects.Graphics;
   private biomeBackgrounds: Phaser.GameObjects.Image[] = [];
-  private verdantMidground!: Phaser.GameObjects.Image;
-  private verdantNear!: Phaser.GameObjects.Image;
-  private desertMidground!: Phaser.GameObjects.Image;
-  private desertNear!: Phaser.GameObjects.Image;
+  private biomeMidgrounds: Phaser.GameObjects.Image[] = [];
+  private biomeNears: Phaser.GameObjects.Image[] = [];
   private terrainBase!: Phaser.GameObjects.Graphics;
   private terrainTiles!: Phaser.GameObjects.Container;
   private terrainTilePool: Phaser.GameObjects.Image[] = [];
@@ -123,10 +121,10 @@ export class AviaryScene extends Phaser.Scene {
 
   preload(): void {
     BACKGROUND_ASSETS.forEach((asset, chapter) => this.load.image(`biome-background-${chapter}`, `/assets/${asset}`));
-    this.load.image("verdant-midground", "/assets/biome-forest-midground-v2-runtime.png");
-    this.load.image("verdant-near", "/assets/biome-forest-near-v2-runtime.png");
-    this.load.image("desert-midground", "/assets/biome-desert-midground-v2-runtime.png");
-    this.load.image("desert-near", "/assets/biome-desert-near-v2-runtime.png");
+    PARALLAX_BIOME_SLUGS.forEach((slug, chapter) => {
+      this.load.image(`biome-midground-${chapter}`, `/assets/biome-${slug}-midground-v2-runtime.png`);
+      this.load.image(`biome-near-${chapter}`, `/assets/biome-${slug}-near-v2-runtime.png`);
+    });
     INTERACTIVE_ART.forEach((family, chapter) => {
       for (const asset of family.assets) {
         this.load.image(interactiveTextureKey(chapter, asset), interactiveAssetPath(family, asset));
@@ -172,7 +170,7 @@ export class AviaryScene extends Phaser.Scene {
     const requestedSeed = Number(query.get("seed"));
     const requestedChapter = query.get("previewChapter");
     const requestedChunk = query.get("previewChunk") ?? undefined;
-    const previewChapter = requestedChapter === null ? (import.meta.env.DEV ? 2 : 0) : Number(requestedChapter);
+    const previewChapter = requestedChapter === null ? (import.meta.env.DEV ? 1 : 0) : Number(requestedChapter);
     const seed = Number.isFinite(requestedSeed) && requestedSeed > 0 ? requestedSeed >>> 0 : (Date.now() ^ 0x51a7e) >>> 0;
     this.model = new GameModel(
       seed,
@@ -187,10 +185,12 @@ export class AviaryScene extends Phaser.Scene {
       const image = this.add.image(0, 0, `biome-background-${chapter}`).setOrigin(0, 0).setDisplaySize(VIEW_WIDTH, VIEW_HEIGHT).setVisible(false);
       this.biomeBackgrounds.push(image);
     }
-    this.verdantMidground = this.add.image(0, 0, "verdant-midground").setOrigin(0, 0).setVisible(false);
-    this.verdantNear = this.add.image(0, 0, "verdant-near").setOrigin(0, 0).setVisible(false);
-    this.desertMidground = this.add.image(0, 0, "desert-midground").setOrigin(0, 0).setVisible(false);
-    this.desertNear = this.add.image(0, 0, "desert-near").setOrigin(0, 0).setVisible(false);
+    for (let chapter = 0; chapter < CHAPTERS.length; chapter += 1) {
+      this.biomeMidgrounds.push(this.add.image(0, 0, `biome-midground-${chapter}`).setOrigin(0, 0).setVisible(false));
+    }
+    for (let chapter = 0; chapter < CHAPTERS.length; chapter += 1) {
+      this.biomeNears.push(this.add.image(0, 0, `biome-near-${chapter}`).setOrigin(0, 0).setVisible(false));
+    }
     this.terrainBase = this.add.graphics();
     this.terrainTiles = this.add.container();
     for (let index = 0; index < 768; index += 1) {
@@ -486,26 +486,25 @@ export class AviaryScene extends Phaser.Scene {
       if (chapter === to) alpha = to === from ? 1 : progress;
       image.setVisible(alpha > 0).setAlpha(alpha);
       if (alpha <= 0) continue;
-      if (chapter === 0 || chapter === 2) {
-        const parallax = chapter === 0
-          ? verdantParallaxState(parallaxDistanceFor(chapter), this.cameraOffsetY, this.settings.reducedMotion)
-          : desertParallaxState(parallaxDistanceFor(chapter), this.cameraOffsetY, this.settings.reducedMotion);
-        this.applyParallaxCrop(image, parallax.far);
-      } else {
-        image.setCrop().setDisplaySize(VIEW_WIDTH, VIEW_HEIGHT);
-      }
+      const parallax = biomeParallaxState(
+        chapter,
+        parallaxDistanceFor(chapter),
+        this.cameraOffsetY,
+        this.settings.reducedMotion,
+      );
+      this.applyParallaxCrop(image, parallax.far);
     }
-    const verdantAlpha = from === 0 ? 1 - progress : to === 0 ? progress : 0;
-    const verdantDistance = from === 0 ? fromDistance : toDistance;
-    const parallax = verdantParallaxState(verdantDistance, this.cameraOffsetY, this.settings.reducedMotion);
-    this.renderParallaxLayer(this.verdantMidground, parallax.mid, verdantAlpha);
-    this.renderParallaxLayer(this.verdantNear, parallax.near, verdantAlpha);
-
-    const desertAlpha = from === 2 ? 1 - progress : to === 2 ? progress : 0;
-    const desertDistance = from === 2 ? fromDistance : toDistance;
-    const desertParallax = desertParallaxState(desertDistance, this.cameraOffsetY, this.settings.reducedMotion);
-    this.renderParallaxLayer(this.desertMidground, desertParallax.mid, desertAlpha);
-    this.renderParallaxLayer(this.desertNear, desertParallax.near, desertAlpha);
+    for (let chapter = 0; chapter < CHAPTERS.length; chapter += 1) {
+      const alpha = from === chapter ? 1 - progress : to === chapter ? (to === from ? 1 : progress) : 0;
+      const parallax = biomeParallaxState(
+        chapter,
+        parallaxDistanceFor(chapter),
+        this.cameraOffsetY,
+        this.settings.reducedMotion,
+      );
+      this.renderParallaxLayer(this.biomeMidgrounds[chapter]!, parallax.mid, alpha);
+      this.renderParallaxLayer(this.biomeNears[chapter]!, parallax.near, alpha);
+    }
   }
 
   private applyParallaxCrop(image: Phaser.GameObjects.Image, crop: ParallaxCrop): void {

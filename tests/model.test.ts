@@ -24,7 +24,7 @@ import {
   TERRAIN_SPIKE_POINT_WIDTH,
 } from "../src/game/hazards";
 import { PROP_ART, propGroundPlacement, propGroundPlacementAtWorldX, propLayout } from "../src/game/props";
-import { desertParallaxState, verdantParallaxState } from "../src/game/parallax";
+import { biomeParallaxState, desertParallaxState, PARALLAX_BIOME_SLUGS, verdantParallaxState } from "../src/game/parallax";
 import { dangerOutlineDisplaySize, screenXAtRenderDistance, snappedRenderDistance } from "../src/game/rendering";
 import {
   authoredAssetForHazard,
@@ -686,6 +686,25 @@ describe("birdddddd model", () => {
     expect(reduced.far.x).toBeLessThan(moved.far.x);
     expect(reduced.mid.x).toBeLessThan(moved.mid.x);
     expect(reduced.near.x).toBeLessThan(moved.near.x);
+  });
+
+  it("gives every biome three independently moving authored depth layers", () => {
+    expect(PARALLAX_BIOME_SLUGS).toHaveLength(CHAPTERS.length);
+    for (let chapter = 0; chapter < CHAPTERS.length; chapter += 1) {
+      const start = biomeParallaxState(chapter, 0, 0, false);
+      const moved = biomeParallaxState(chapter, 400, 20, false);
+      const reduced = biomeParallaxState(chapter, 400, 20, true);
+      expect(moved.far.x, `chapter ${chapter} far`).toBeGreaterThan(start.far.x);
+      expect(moved.mid.x, `chapter ${chapter} mid`).toBeGreaterThan(moved.far.x);
+      expect(moved.near.x, `chapter ${chapter} near`).toBeGreaterThan(moved.mid.x);
+      expect(reduced.far.x, `chapter ${chapter} reduced far`).toBeLessThan(moved.far.x);
+      expect(reduced.mid.x, `chapter ${chapter} reduced mid`).toBeLessThan(moved.mid.x);
+      expect(reduced.near.x, `chapter ${chapter} reduced near`).toBeLessThan(moved.near.x);
+      for (const layer of [moved.far, moved.mid, moved.near]) {
+        expect(layer.x + layer.width).toBeLessThanOrEqual(512);
+        expect(layer.y + layer.height).toBeLessThanOrEqual(288);
+      }
+    }
   });
 
   it("shares one pixel-snapped scroll sample and preserves an outline's undistorted center", () => {

@@ -31,16 +31,33 @@ def save_png(image: Image.Image, path: Path) -> None:
     image.save(path, format="PNG", optimize=True)
 
 
+def remove_neutral_checkerboard(image: Image.Image) -> Image.Image:
+    """Clear bright neutral preview pixels while preserving saturated authored art."""
+    rgba = image.convert("RGBA")
+    pixels = []
+    for red, green, blue, alpha in rgba.getdata():
+        neutral = max(red, green, blue) - min(red, green, blue) <= 18
+        if neutral and min(red, green, blue) >= 180:
+            pixels.append((red, green, blue, 0))
+        else:
+            pixels.append((red, green, blue, alpha))
+    rgba.putdata(pixels)
+    return rgba
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--input", type=Path, required=True)
     parser.add_argument("--source-output", type=Path, required=True)
     parser.add_argument("--runtime-output", type=Path, required=True)
+    parser.add_argument("--remove-neutral-checkerboard", action="store_true")
     args = parser.parse_args()
 
     with Image.open(args.input) as opened:
         mode = "RGBA" if "A" in opened.getbands() else "RGB"
         plate = centered_crop(opened.convert(mode))
+        if args.remove_neutral_checkerboard:
+            plate = remove_neutral_checkerboard(plate)
         source = plate.resize(SOURCE_SIZE, Image.Resampling.LANCZOS)
         runtime = source.resize(RUNTIME_SIZE, Image.Resampling.LANCZOS)
         save_png(source, args.source_output)
