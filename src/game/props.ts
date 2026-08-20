@@ -86,3 +86,21 @@ export function propGroundPlacement(
   if (!Number.isFinite(anchorY)) return undefined;
   return { y: anchorY + 1, rotation };
 }
+
+/**
+ * Fits a prop at its immutable world anchor, independent of the camera and the
+ * visible contour cache. This lets offscreen props enter with their final
+ * height and rotation already resolved.
+ */
+export function propGroundPlacementAtWorldX(
+  layout: PropLayout,
+  anchorWorldX: number,
+  floorAtWorldX: (worldX: number) => number | undefined,
+  sampleCount = 8,
+): PropGroundPlacement | undefined {
+  return propGroundPlacement(
+    layout,
+    (relativeX) => floorAtWorldX(anchorWorldX + relativeX),
+    sampleCount,
+  );
+}

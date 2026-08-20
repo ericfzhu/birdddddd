@@ -18,7 +18,7 @@ import {
 } from "./constants";
 import { sandJetVisualLayout, spikeClusterLayout, spikeRotationForNormal } from "./hazards";
 import { desertParallaxState, verdantParallaxState, type ParallaxCrop } from "./parallax";
-import { propGroundPlacement, propLayout } from "./props";
+import { propGroundPlacementAtWorldX, propLayout } from "./props";
 import {
   authoredAssetForHazard,
   interactiveAssetPath,
@@ -509,11 +509,11 @@ export class AviaryScene extends Phaser.Scene {
     this.drawTunnelFill(base, tunnel, from, 1 - progress);
     if (to !== from) this.drawTunnelFill(base, tunnel, to, progress);
     this.renderTerrainTiles(tunnel, from, to, progress, renderY);
-    this.renderChunkDecorations(tunnel);
+    this.renderChunkDecorations();
     this.drawTunnelRails(g, tunnel, from, 1 - progress);
     if (to !== from) this.drawTunnelRails(g, tunnel, to, progress);
     this.drawTransitionPassages(g);
-    this.drawChunkGates(g, tunnel);
+    this.drawChunkGates(g);
     const visibleRects = this.model.visibleRects();
     this.renderAuthoredTerrainSprites(visibleRects);
     for (const rect of visibleRects) this.drawRectEntity(g, rect);
@@ -669,25 +669,25 @@ export class AviaryScene extends Phaser.Scene {
     }
   }
 
-  private renderChunkDecorations(tunnel: VisibleTunnelPoint[]): void {
+  private renderChunkDecorations(): void {
     for (const prop of this.propPool) prop.setVisible(false);
     let propIndex = 0;
     for (const chunk of this.model.chunks) {
-      const origin = chunk.startX - this.model.distance;
       const transition = chunk.definition.transition;
       if (transition) {
         const art = transitionArtFor(transition.from, transition.to);
         if (!art) continue;
-        const x = origin + chunk.definition.width * 0.5;
+        const worldX = chunk.startX + chunk.definition.width * 0.5;
+        const x = worldX - this.model.distance;
         if (x < -48 || x > VIEW_WIDTH + 48) continue;
-        const point = this.tunnelPointAt(tunnel, x);
         const prop = this.propPool[propIndex++];
-        if (!point || !prop) continue;
+        if (!prop) continue;
+        const floor = PLAY_BOTTOM + this.model.terrainOffsetAtWorldX(worldX);
         prop
           .setTexture(transitionTextureKey(transition.from, transition.to))
           .setOrigin(0.5, 1)
           .setDisplaySize(72, 42)
-          .setPosition(Math.round(x), Math.round(point.floor + 1))
+          .setPosition(Math.round(x), Math.round(floor + 1))
           .setRotation(0)
           .setAlpha(0.94)
           .setVisible(true);
@@ -695,14 +695,19 @@ export class AviaryScene extends Phaser.Scene {
       }
       const idValue = [...chunk.definition.id].reduce((total, character) => total + character.charCodeAt(0), 0);
       const localX = 72 + (idValue % 38);
-      const x = origin + localX;
+      const worldX = chunk.startX + localX;
+      const x = worldX - this.model.distance;
       if (x < -36 || x > VIEW_WIDTH + 36) continue;
       if (chunk.definition.decoration === "passage") continue;
       const prop = this.propPool[propIndex++];
       if (!prop) return;
       const chapter = chunk.definition.chapter;
       const layout = propLayout(chapter);
-      const placement = propGroundPlacement(layout, (relativeX) => this.tunnelPointAt(tunnel, x + relativeX)?.floor);
+      const placement = propGroundPlacementAtWorldX(
+        layout,
+        worldX,
+        (sampleWorldX) => PLAY_BOTTOM + this.model.terrainOffsetAtWorldX(sampleWorldX),
+      );
       if (!placement) continue;
       const legacyChapter = LEGACY_ATLAS_CHAPTER.get(chapter);
       if (legacyChapter === undefined) prop.setTexture(`biome-prop-${chapter}`);
@@ -738,14 +743,15 @@ export class AviaryScene extends Phaser.Scene {
     }
   }
 
-  private drawChunkGates(g: Phaser.GameObjects.Graphics, tunnel: VisibleTunnelPoint[]): void {
+  private drawChunkGates(g: Phaser.GameObjects.Graphics): void {
     for (const chunk of this.model.chunks) {
       if (chunk.definition.transition) continue;
-      const x = chunk.startX + chunk.definition.width - 12 - this.model.distance;
+      const worldX = chunk.startX + chunk.definition.width - 12;
+      const x = worldX - this.model.distance;
       if (x < -8 || x > VIEW_WIDTH + 8) continue;
       const biome = BIOMES[chunk.definition.chapter] ?? BIOMES[0];
-      const point = this.tunnelPointAt(tunnel, x);
-      if (!point) continue;
+      const offset = this.model.terrainOffsetAtWorldX(worldX);
+      const point = { ceiling: PLAY_TOP + offset, floor: PLAY_BOTTOM + offset };
       g.fillStyle(0x5e4028, 0.82);
       g.fillRect(x, point.floor - 7, 2, 7);
       g.fillRect(x, point.ceiling, 2, 7);

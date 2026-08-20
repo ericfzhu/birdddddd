@@ -22,7 +22,7 @@ import {
   spikeRotationForNormal,
   TERRAIN_SPIKE_POINT_WIDTH,
 } from "../src/game/hazards";
-import { PROP_ART, propGroundPlacement, propLayout } from "../src/game/props";
+import { PROP_ART, propGroundPlacement, propGroundPlacementAtWorldX, propLayout } from "../src/game/props";
 import { desertParallaxState, verdantParallaxState } from "../src/game/parallax";
 import {
   authoredAssetForHazard,
@@ -538,6 +538,29 @@ describe("birdddddd model", () => {
       expect(propBaseY).toBeLessThanOrEqual(floorY + 1.001);
       expect(propBaseY).toBeGreaterThanOrEqual(floorY + 0.999);
     }
+  });
+
+  it("keeps prop placement fixed at its authored world anchor as the camera advances", () => {
+    const layout = propLayout(6);
+    const anchorWorldX = 420;
+    const floorAtWorldX = (worldX: number) => 150 + (worldX - anchorWorldX) * 0.3;
+    const beforeEntryScreenX = anchorWorldX - 80;
+    const afterEntryScreenX = anchorWorldX - 360;
+
+    const beforeEntry = propGroundPlacementAtWorldX(
+      layout,
+      80 + beforeEntryScreenX,
+      floorAtWorldX,
+    );
+    const afterEntry = propGroundPlacementAtWorldX(
+      layout,
+      360 + afterEntryScreenX,
+      floorAtWorldX,
+    );
+
+    expect(beforeEntry).toEqual(afterEntry);
+    expect(beforeEntry?.rotation).toBeCloseTo(Math.atan(0.3), 5);
+    expect(beforeEntry?.y).toBeCloseTo(151, 5);
   });
 
   it("moves Verdant Wilds background layers at increasing depth rates", () => {
