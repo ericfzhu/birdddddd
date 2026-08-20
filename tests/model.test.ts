@@ -24,6 +24,7 @@ import {
 } from "../src/game/hazards";
 import { PROP_ART, propGroundPlacement, propGroundPlacementAtWorldX, propLayout } from "../src/game/props";
 import { desertParallaxState, verdantParallaxState } from "../src/game/parallax";
+import { dangerOutlineDisplaySize, screenXAtRenderDistance, snappedRenderDistance } from "../src/game/rendering";
 import {
   authoredAssetForHazard,
   interactiveDangerTextureKey,
@@ -591,6 +592,23 @@ describe("birdddddd model", () => {
     expect(reduced.far.x).toBeLessThan(moved.far.x);
     expect(reduced.mid.x).toBeLessThan(moved.mid.x);
     expect(reduced.near.x).toBeLessThan(moved.near.x);
+  });
+
+  it("shares one pixel-snapped scroll sample and preserves an outline's undistorted center", () => {
+    const firstRenderDistance = snappedRenderDistance(10.4);
+    const nextRenderDistance = snappedRenderDistance(10.6);
+    expect(firstRenderDistance).toBe(10);
+    expect(nextRenderDistance).toBe(11);
+    expect(screenXAtRenderDistance(140, firstRenderDistance) - screenXAtRenderDistance(100, firstRenderDistance)).toBe(40);
+    expect(screenXAtRenderDistance(140, nextRenderDistance) - screenXAtRenderDistance(100, nextRenderDistance)).toBe(40);
+
+    const outline = dangerOutlineDisplaySize(20, 40, 100, 200, 10, 0.5, 1);
+    const horizontalPadding = outline.width * 10 / 120;
+    const verticalPadding = outline.height * 10 / 220;
+    expect(outline.width - horizontalPadding * 2).toBeCloseTo(20, 5);
+    expect(outline.height - verticalPadding * 2).toBeCloseTo(40, 5);
+    expect(outline.originX).toBe(0.5);
+    expect(outline.originY).toBeCloseTo(210 / 220, 5);
   });
 
   it("collides terrain spikes at their uniform visible height", () => {

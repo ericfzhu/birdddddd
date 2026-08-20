@@ -19,6 +19,7 @@ import {
 import { sandJetVisualLayout, spikeClusterLayout, spikeRotationForNormal } from "./hazards";
 import { desertParallaxState, verdantParallaxState, type ParallaxCrop } from "./parallax";
 import { propGroundPlacementAtWorldX, propLayout } from "./props";
+import { dangerOutlineDisplaySize, screenXAtRenderDistance, snappedRenderDistance } from "./rendering";
 import {
   authoredAssetForHazard,
   interactiveAssetPath,
@@ -46,6 +47,12 @@ interface StoredSettings {
   bestScore: number;
   muted: boolean;
   reducedMotion: boolean;
+}
+
+interface DangerSilhouetteMetrics {
+  sourceWidth: number;
+  sourceHeight: number;
+  padding: number;
 }
 
 const STORAGE_KEY = "birdddddd:v1";
@@ -83,6 +90,8 @@ export class AviaryScene extends Phaser.Scene {
   private authoredTerrainLayer!: Phaser.GameObjects.Container;
   private authoredTerrainPool: Phaser.GameObjects.Image[] = [];
   private authoredRects = new Set<VisibleRect>();
+  private dangerSilhouetteMetrics = new Map<string, DangerSilhouetteMetrics>();
+  private renderDistance = 0;
   private world!: Phaser.GameObjects.Graphics;
   private effects!: Phaser.GameObjects.Graphics;
   private ui!: Phaser.GameObjects.Graphics;
@@ -153,6 +162,7 @@ export class AviaryScene extends Phaser.Scene {
           interactiveTextureKey(chapter, asset),
           interactiveDangerTextureKey(chapter, asset),
           dangerColor,
+          asset === "shutter" ? 12 : 8,
         );
       }
     });
@@ -211,21 +221,40 @@ export class AviaryScene extends Phaser.Scene {
     window.dispatchEvent(new Event("birdddddd:scene-ready"));
   }
 
-  private createSolidSilhouetteTexture(sourceKey: string, targetKey: string, color: string): void {
+  private createSolidSilhouetteTexture(sourceKey: string, targetKey: string, color: string, padding: number): void {
     const source = this.textures.get(sourceKey).getSourceImage();
     if (!(source instanceof HTMLImageElement || source instanceof HTMLCanvasElement)) {
       throw new Error(`Silhouette source is not a drawable image: ${sourceKey}`);
     }
-    const texture = this.textures.createCanvas(targetKey, source.width, source.height);
+    const mask = document.createElement("canvas");
+    mask.width = source.width;
+    mask.height = source.height;
+    const maskContext = mask.getContext("2d");
+    if (!maskContext) throw new Error(`Could not create silhouette mask: ${targetKey}`);
+    maskContext.imageSmoothingEnabled = false;
+    maskContext.drawImage(source, 0, 0, source.width, source.height);
+    maskContext.globalCompositeOperation = "source-in";
+    maskContext.fillStyle = color;
+    maskContext.fillRect(0, 0, source.width, source.height);
+    maskContext.globalCompositeOperation = "source-over";
+
+    const texture = this.textures.createCanvas(targetKey, source.width + padding * 2, source.height + padding * 2);
     if (!texture) throw new Error(`Could not create silhouette texture: ${targetKey}`);
     const context = texture.getContext();
-    context.clearRect(0, 0, source.width, source.height);
-    context.drawImage(source, 0, 0, source.width, source.height);
-    context.globalCompositeOperation = "source-in";
-    context.fillStyle = color;
-    context.fillRect(0, 0, source.width, source.height);
-    context.globalCompositeOperation = "source-over";
+    context.imageSmoothingEnabled = false;
+    context.clearRect(0, 0, texture.width, texture.height);
+    for (let offsetY = -padding; offsetY <= padding; offsetY += 1) {
+      for (let offsetX = -padding; offsetX <= padding; offsetX += 1) {
+        if (offsetX * offsetX + offsetY * offsetY > padding * padding) continue;
+        context.drawImage(mask, padding + offsetX, padding + offsetY);
+      }
+    }
     texture.refresh();
+    this.dangerSilhouetteMetrics.set(targetKey, {
+      sourceWidth: source.width,
+      sourceHeight: source.height,
+      padding,
+    });
   }
 
   update(_time: number, deltaMs: number): void {
@@ -495,6 +524,7 @@ export class AviaryScene extends Phaser.Scene {
     const shakeY = this.shake > 0 ? Math.cos(this.uiTime * 90) * 1.1 : 0;
     const renderX = Math.round(shakeX);
     const renderY = Math.round(shakeY + this.cameraOffsetY);
+    this.renderDistance = snappedRenderDistance(this.model.distance);
     base.setPosition(renderX, renderY);
     this.terrainTiles.setPosition(renderX, renderY);
     this.propLayer.setPosition(renderX, renderY);
@@ -514,11 +544,15 @@ export class AviaryScene extends Phaser.Scene {
     if (to !== from) this.drawTunnelRails(g, tunnel, to, progress);
     this.drawTransitionPassages(g);
     this.drawChunkGates(g);
-    const visibleRects = this.model.visibleRects();
+    const scrollCorrectionX = this.model.distance - this.renderDistance;
+    const visibleRects = this.model.visibleRects().map((rect) => ({
+      ...rect,
+      x: rect.x + scrollCorrectionX,
+    }));
     this.renderAuthoredTerrainSprites(visibleRects);
     for (const rect of visibleRects) this.drawRectEntity(g, rect);
     for (const feather of this.model.visibleFeathers()) {
-      if (!feather.collected) this.drawFeather(g, feather.x, feather.y, 1);
+      if (!feather.collected) this.drawFeather(g, feather.x + scrollCorrectionX, feather.y, 1);
     }
     if (this.model.animationState() !== "gone") this.drawBird(g);
   }
@@ -530,7 +564,7 @@ export class AviaryScene extends Phaser.Scene {
     for (let worldX = firstWorldX; worldX <= lastWorldX; worldX += step) {
       const offset = this.model.terrainOffsetAtWorldX(worldX);
       points.push({
-        x: worldX - this.model.distance,
+        x: screenXAtRenderDistance(worldX, this.renderDistance),
         ceiling: PLAY_TOP + offset,
         floor: PLAY_BOTTOM + offset,
       });
@@ -582,7 +616,7 @@ export class AviaryScene extends Phaser.Scene {
     let poolIndex = 0;
     for (let worldColumn = firstWorldColumn; worldColumn <= lastWorldColumn; worldColumn += 1) {
       const worldX = worldColumn * tileSize;
-      const x = worldX - this.model.distance;
+      const x = screenXAtRenderDistance(worldX, this.renderDistance);
       const point = this.tunnelPointAt(tunnel, x + tileSize / 2);
       if (!point) continue;
       const topLayers = Math.max(0, Math.ceil((point.ceiling - visibleTop) / tileSize));
@@ -618,7 +652,6 @@ export class AviaryScene extends Phaser.Scene {
     if (alpha <= 0 || tunnel.length < 2) return;
     const biome = BIOMES[chapter] ?? BIOMES[0];
     const thickness = chapter === 4 || chapter === 8 ? 4 : 3;
-    const spacing = [12, 14, 16, 15, 14, 13, 12, 16, 12][chapter] ?? 16;
     g.lineStyle(thickness, biome.surface, alpha);
     for (let index = 1; index < tunnel.length; index += 1) {
       const previous = tunnel[index - 1];
@@ -635,38 +668,6 @@ export class AviaryScene extends Phaser.Scene {
       g.lineBetween(previous.x, previous.ceiling + 2, point.x, point.ceiling + 2);
       g.lineBetween(previous.x, previous.floor - 2, point.x, point.floor - 2);
     }
-    const drift = -((this.model.distance % spacing + spacing) % spacing);
-    for (let x = drift; x < VIEW_WIDTH + spacing; x += spacing) {
-      const point = this.tunnelPointAt(tunnel, x + 4);
-      if (!point) continue;
-      if (chapter === 0) {
-        g.fillStyle(biome.accent, 0.92 * alpha);
-        g.fillTriangle(x, point.floor, x + 2, point.floor - 4 - (Math.round(x / spacing) % 2), x + 4, point.floor);
-        g.fillTriangle(x + 6, point.ceiling, x + 8, point.ceiling + 4, x + 10, point.ceiling);
-        g.fillStyle(biome.terrainDark, 0.58 * alpha);
-        g.fillRect(x + 5, point.floor + 5, 2, 2);
-      } else if (chapter === 1 || chapter === 3) {
-        g.fillStyle(biome.accent, 0.78 * alpha);
-        g.fillRect(x, point.ceiling - 2, 7, 2);
-        g.fillRect(x + 8, point.floor, 7, 2);
-        g.fillStyle(biome.terrain, 0.85 * alpha);
-        g.fillRect(x + 3, point.ceiling - 5, 3, 2);
-        g.fillRect(x + 10, point.floor + 4, 3, 2);
-      } else if (chapter === 2 || chapter === 4 || chapter === 5) {
-        g.fillStyle(biome.accent, 0.9 * alpha);
-        g.fillTriangle(x, point.ceiling, x + 3, point.ceiling - 5, x + 6, point.ceiling);
-        g.fillTriangle(x + 7, point.floor, x + 10, point.floor + 5, x + 13, point.floor);
-      } else {
-        g.fillStyle(biome.surface, 0.9 * alpha);
-        g.fillRect(x, point.ceiling - 3, 6, 3);
-        g.fillRect(x + 8, point.floor, 6, 3);
-        if (Math.round(x / spacing) % 3 === 0) {
-          g.fillStyle(biome.glow, 0.9 * alpha);
-          g.fillRect(x + 2, point.ceiling - 7, 2, 2);
-          g.fillRect(x + 11, point.floor + 5, 2, 2);
-        }
-      }
-    }
   }
 
   private renderChunkDecorations(): void {
@@ -678,7 +679,7 @@ export class AviaryScene extends Phaser.Scene {
         const art = transitionArtFor(transition.from, transition.to);
         if (!art) continue;
         const worldX = chunk.startX + chunk.definition.width * 0.5;
-        const x = worldX - this.model.distance;
+        const x = screenXAtRenderDistance(worldX, this.renderDistance);
         if (x < -48 || x > VIEW_WIDTH + 48) continue;
         const prop = this.propPool[propIndex++];
         if (!prop) continue;
@@ -696,7 +697,7 @@ export class AviaryScene extends Phaser.Scene {
       const idValue = [...chunk.definition.id].reduce((total, character) => total + character.charCodeAt(0), 0);
       const localX = 72 + (idValue % 38);
       const worldX = chunk.startX + localX;
-      const x = worldX - this.model.distance;
+      const x = screenXAtRenderDistance(worldX, this.renderDistance);
       if (x < -36 || x > VIEW_WIDTH + 36) continue;
       if (chunk.definition.decoration === "passage") continue;
       const prop = this.propPool[propIndex++];
@@ -725,7 +726,7 @@ export class AviaryScene extends Phaser.Scene {
   private drawTransitionPassages(g: Phaser.GameObjects.Graphics): void {
     for (const chunk of this.model.chunks) {
       if (!chunk.definition.transition) continue;
-      const left = chunk.startX - this.model.distance;
+      const left = screenXAtRenderDistance(chunk.startX, this.renderDistance);
       const right = left + chunk.definition.width;
       if (right < -12 || left > VIEW_WIDTH + 12) continue;
       const start = left - ((left % 24 + 24) % 24);
@@ -747,7 +748,7 @@ export class AviaryScene extends Phaser.Scene {
     for (const chunk of this.model.chunks) {
       if (chunk.definition.transition) continue;
       const worldX = chunk.startX + chunk.definition.width - 12;
-      const x = worldX - this.model.distance;
+      const x = screenXAtRenderDistance(worldX, this.renderDistance);
       if (x < -8 || x > VIEW_WIDTH + 8) continue;
       const biome = BIOMES[chunk.definition.chapter] ?? BIOMES[0];
       const offset = this.model.terrainOffsetAtWorldX(worldX);
@@ -874,18 +875,13 @@ export class AviaryScene extends Phaser.Scene {
           const warningEdge = takeSprite(`${texturePrefix}-thorn`);
           const cluster = takeSprite(`${texturePrefix}-thorn`);
           if (warningEdge && cluster) {
-            warningEdge
-              .setTexture(interactiveDangerTextureKey(rect.chapter, "thorn"))
-              .setOrigin(0.5, 1)
-              .setDisplaySize(rect.w + 11, rect.h + 5)
-              .setPosition(Math.round(centerX), Math.round(surfaceY))
-              .setRotation(rotation)
-              .setAlpha(1);
             cluster
               .setOrigin(0.5, 1)
               .setDisplaySize(rect.w + 7, rect.h + 2)
               .setPosition(Math.round(centerX), Math.round(surfaceY))
               .setRotation(rotation);
+            warningEdge.setTexture(interactiveDangerTextureKey(rect.chapter, "thorn"));
+            this.syncDangerSilhouette(warningEdge, cluster);
             this.authoredRects.add(rect);
           }
           continue;
@@ -903,18 +899,13 @@ export class AviaryScene extends Phaser.Scene {
             complete = false;
             continue;
           }
-          warningEdge
-            .setTexture(interactiveDangerTextureKey(rect.chapter, rect.kind === "barbs" ? "barb" : "thorn"))
-            .setOrigin(0.5, 1)
-            .setDisplaySize(point.width + 4 + (family.emphasis?.spikeWidthBonus ?? 0), rect.h + 4)
-            .setPosition(Math.round(centerX), Math.round(surfaceY))
-            .setRotation(rotation)
-            .setAlpha(1);
           spike
             .setOrigin(0.5, 1)
             .setDisplaySize(point.width + 2 + (family.emphasis?.spikeWidthBonus ?? 0), rect.h + 2)
             .setPosition(Math.round(centerX), Math.round(surfaceY))
             .setRotation(rotation);
+          warningEdge.setTexture(interactiveDangerTextureKey(rect.chapter, rect.kind === "barbs" ? "barb" : "thorn"));
+          this.syncDangerSilhouette(warningEdge, spike);
         }
         if (complete) this.authoredRects.add(rect);
         continue;
@@ -952,7 +943,7 @@ export class AviaryScene extends Phaser.Scene {
             .setDisplaySize(rect.w + 8, rect.h - SANDJET_NOZZLE_DEPTH + 4)
             .setPosition(centerX, Math.round(layout.openingY))
             .setFlipY(layout.flipY);
-          this.syncDangerSilhouette(warningSprite, plumeSprite, 4);
+          this.syncDangerSilhouette(warningSprite, plumeSprite);
         }
         this.authoredRects.add(rect);
         continue;
@@ -1004,7 +995,7 @@ export class AviaryScene extends Phaser.Scene {
         }
       }
       if (warningSprite) {
-        this.syncDangerSilhouette(warningSprite, sprite, rect.kind === "shutter" ? 7 : 4);
+        this.syncDangerSilhouette(warningSprite, sprite);
       }
       this.authoredRects.add(rect);
     }
@@ -1013,11 +1004,21 @@ export class AviaryScene extends Phaser.Scene {
   private syncDangerSilhouette(
     warning: Phaser.GameObjects.Image,
     sprite: Phaser.GameObjects.Image,
-    padding: number,
   ): void {
+    const metrics = this.dangerSilhouetteMetrics.get(warning.texture.key);
+    if (!metrics) throw new Error(`Missing danger silhouette metrics: ${warning.texture.key}`);
+    const displaySize = dangerOutlineDisplaySize(
+      sprite.displayWidth,
+      sprite.displayHeight,
+      metrics.sourceWidth,
+      metrics.sourceHeight,
+      metrics.padding,
+      sprite.originX,
+      sprite.originY,
+    );
     warning
-      .setOrigin(sprite.originX, sprite.originY)
-      .setDisplaySize(sprite.displayWidth + padding, sprite.displayHeight + padding)
+      .setOrigin(displaySize.originX, displaySize.originY)
+      .setDisplaySize(displaySize.width, displaySize.height)
       .setPosition(sprite.x, sprite.y)
       .setRotation(sprite.rotation)
       .setFlipX(sprite.flipX)
@@ -1026,14 +1027,14 @@ export class AviaryScene extends Phaser.Scene {
   }
 
   private terrainSurfaceYAt(x: number, ceiling: boolean): number {
-    const offset = this.model.terrainOffsetAtWorldX(this.model.distance + x);
+    const offset = this.model.terrainOffsetAtWorldX(this.renderDistance + x);
     return (ceiling ? PLAY_TOP : PLAY_BOTTOM) + offset;
   }
 
   private terrainInwardNormalAt(x: number, ceiling: boolean): Phaser.Math.Vector2 {
     const sampleRadius = 2;
-    const leftOffset = this.model.terrainOffsetAtWorldX(this.model.distance + x - sampleRadius);
-    const rightOffset = this.model.terrainOffsetAtWorldX(this.model.distance + x + sampleRadius);
+    const leftOffset = this.model.terrainOffsetAtWorldX(this.renderDistance + x - sampleRadius);
+    const rightOffset = this.model.terrainOffsetAtWorldX(this.renderDistance + x + sampleRadius);
     const slope = (rightOffset - leftOffset) / (sampleRadius * 2);
     const length = Math.hypot(1, slope);
     return ceiling
