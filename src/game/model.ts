@@ -1,6 +1,7 @@
 import {
   CHAPTERS,
   FIXED_STEP_SECONDS,
+  FLAME_VENT_DEPTH,
   FLIP_DEBOUNCE_SECONDS,
   GRAVITY_ACCELERATION,
   HITBOX_INSET,
@@ -491,16 +492,17 @@ export class GameModel {
         if (!this.hazardIsActive(hazard)) continue;
         const terrainSpike = hazard.kind === "thorns" || hazard.kind === "barbs";
         const sandJet = hazard.kind === "sandJet";
+        const surfaceFlame = hazard.kind === "flame" && hazard.attachment !== "floating";
         const collisionHeight = terrainSpike
           ? hazard.h * TERRAIN_SPIKE_COLLISION_RATIO
-          : sandJet
-            ? Math.max(1, hazard.h - SANDJET_NOZZLE_DEPTH)
+          : sandJet || surfaceFlame
+            ? Math.max(1, hazard.h - (sandJet ? SANDJET_NOZZLE_DEPTH : FLAME_VENT_DEPTH))
             : hazard.h;
         const ceilingSpike = hazard.attachment === "ceiling" || hazard.flipY === true;
         const collisionInsetY = terrainSpike && !ceilingSpike
           ? hazard.h - collisionHeight
-          : sandJet && ceilingSpike
-            ? SANDJET_NOZZLE_DEPTH
+          : (sandJet || surfaceFlame) && ceilingSpike
+            ? sandJet ? SANDJET_NOZZLE_DEPTH : FLAME_VENT_DEPTH
             : 0;
         const rect = {
           x: origin + hazard.x + motion.x,

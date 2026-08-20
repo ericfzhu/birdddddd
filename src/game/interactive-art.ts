@@ -15,7 +15,7 @@ export type InteractiveAssetKind =
   | "spinner"
   | "sandjet"
   | "sandjet-nozzle"
-  | "flame"
+  | "flame-plume"
   | "flame-warning"
   | "vine";
 
@@ -62,7 +62,7 @@ export const INTERACTIVE_ART: readonly InteractiveArtFamily[] = [
     },
   },
   { slug: "ashen", assets: [...common, "ember", "beak", "spinner", "shutter"], hazards: { thorns: "thorn", barbs: "barb", ember: "ember", beak: "beak", spinner: "spinner", shutter: "shutter" } },
-  { slug: "underworld", assets: [...common, "flame", "flame-warning", "spinner", "shutter"], hazards: { thorns: "thorn", barbs: "barb", flame: "flame", spinner: "spinner", shutter: "shutter" } },
+  { slug: "underworld", assets: [...common, "flame-plume", "flame-warning", "spinner", "shutter"], hazards: { thorns: "thorn", barbs: "barb", flame: "flame-plume", spinner: "spinner", shutter: "shutter" } },
 ] as const;
 
 export const TRANSITION_ART: readonly TransitionArt[] = [

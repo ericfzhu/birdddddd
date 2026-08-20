@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   BIOMES,
   CHAPTERS,
+  FLAME_VENT_DEPTH,
   FIXED_STEP_SECONDS,
   FLIP_DEBOUNCE_SECONDS,
   PLAY_BOTTOM,
@@ -20,6 +21,7 @@ import {
   sandJetVisualLayout,
   spikeClusterLayout,
   spikeRotationForNormal,
+  surfaceEmitterVisualLayout,
   TERRAIN_SPIKE_POINT_WIDTH,
 } from "../src/game/hazards";
 import { PROP_ART, propGroundPlacement, propGroundPlacementAtWorldX, propLayout } from "../src/game/props";
@@ -207,6 +209,13 @@ describe("birdddddd model", () => {
     expect(Object.values(desertArt?.hazards ?? {})).not.toContain("sandjet-nozzle");
   });
 
+  it("renders Underworld flames from a persistent vent and separate lethal plume", () => {
+    const underworldArt = INTERACTIVE_ART[8];
+    expect(underworldArt?.assets).toEqual(expect.arrayContaining(["flame-plume", "flame-warning"]));
+    expect(authoredAssetForHazard(8, "flame")).toBe("flame-plume");
+    expect(Object.values(underworldArt?.hazards ?? {})).not.toContain("flame-warning");
+  });
+
   it("gives Minecart's narrow machinery stronger visual emphasis without changing collision data", () => {
     const minecartArt = INTERACTIVE_ART[6];
     expect(minecartArt?.emphasis).toMatchObject({
@@ -305,12 +314,58 @@ describe("birdddddd model", () => {
     expect(ceilingPlumeContact.mode).toBe("dead");
   });
 
+  it("keeps Underworld vent housings safe while separated flame plumes remain lethal", () => {
+    const floorVent: ChunkDefinition = {
+      ...safeChunk(),
+      id: "test-floor-flame-vent",
+      hazards: [{ x: PLAYER_X - 5, y: PLAY_BOTTOM - 48, w: 10, h: 48, kind: "flame", attachment: "floor" }],
+    };
+    const floorHousingContact = new GameModel(905);
+    floorHousingContact.chunks = [activate(floorVent)];
+    floorHousingContact.mode = "playing";
+    floorHousingContact.playerY = PLAY_BOTTOM - FLAME_VENT_DEPTH / 2;
+    floorHousingContact.step();
+    expect(floorHousingContact.mode).toBe("playing");
+
+    const floorPlumeContact = new GameModel(906);
+    floorPlumeContact.chunks = [activate(floorVent)];
+    floorPlumeContact.mode = "playing";
+    floorPlumeContact.playerY = 136;
+    floorPlumeContact.step();
+    expect(floorPlumeContact.mode).toBe("dead");
+
+    const ceilingVent: ChunkDefinition = {
+      ...safeChunk(),
+      id: "test-ceiling-flame-vent",
+      hazards: [{ x: PLAYER_X - 5, y: PLAY_TOP, w: 10, h: 48, kind: "flame", attachment: "ceiling", flipY: true }],
+    };
+    const ceilingHousingContact = new GameModel(907);
+    ceilingHousingContact.chunks = [activate(ceilingVent)];
+    ceilingHousingContact.mode = "playing";
+    ceilingHousingContact.gravity = -1;
+    ceilingHousingContact.playerY = PLAY_TOP + FLAME_VENT_DEPTH / 2;
+    ceilingHousingContact.step();
+    expect(ceilingHousingContact.mode).toBe("playing");
+
+    const ceilingPlumeContact = new GameModel(908);
+    ceilingPlumeContact.chunks = [activate(ceilingVent)];
+    ceilingPlumeContact.mode = "playing";
+    ceilingPlumeContact.playerY = 44;
+    ceilingPlumeContact.step();
+    expect(ceilingPlumeContact.mode).toBe("dead");
+  });
+
   it("anchors ceiling sand-jet art downward from the ceiling opening", () => {
     const floor = sandJetVisualLayout(80, 42, SANDJET_NOZZLE_DEPTH, false);
     expect(floor).toEqual({ baseY: 122, openingY: 108, originY: 1, flipY: false });
 
     const ceiling = sandJetVisualLayout(58, 42, SANDJET_NOZZLE_DEPTH, true);
     expect(ceiling).toEqual({ baseY: 58, openingY: 72, originY: 0, flipY: true });
+  });
+
+  it("anchors floor and ceiling flame emitters into the playable corridor", () => {
+    expect(surfaceEmitterVisualLayout(116, 48, false)).toEqual({ baseY: 164, originY: 1, flipY: false });
+    expect(surfaceEmitterVisualLayout(16, 48, true)).toEqual({ baseY: 16, originY: 0, flipY: true });
   });
 
   it("moves minecarts horizontally without changing their authored track height", () => {
@@ -555,7 +610,7 @@ describe("birdddddd model", () => {
     const minecart = propLayout(6);
     expect(minecart.displayWidth).toBe(54);
     expect(minecart.displayHeight).toBeCloseTo(35.86, 2);
-    expect(minecart.originY).toBe(1);
+    expect(minecart.originY).toBeCloseTo(80 / 85, 5);
 
     const marble = propLayout(3);
     expect(marble.displayWidth).toBeCloseTo(45.75, 2);

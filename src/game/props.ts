@@ -24,7 +24,7 @@ export const PROP_ART: readonly PropArtMetrics[] = [
   { sourceWidth: 122, sourceHeight: 128, alphaLeft: 0, alphaRight: 102, alphaBottom: 122, maxSize: 48 },
   { ...DEFAULT_PROP, maxSize: 48 },
   { sourceWidth: 128, sourceHeight: 128, alphaLeft: 17, alphaRight: 112, alphaBottom: 117, maxSize: 48 },
-  { sourceWidth: 128, sourceHeight: 85, alphaLeft: 12, alphaRight: 126, alphaBottom: 85, maxSize: 54 },
+  { sourceWidth: 128, sourceHeight: 85, alphaLeft: 12, alphaRight: 117, alphaBottom: 80, maxSize: 54 },
   { ...DEFAULT_PROP, maxSize: 45 },
   { sourceWidth: 128, sourceHeight: 117, alphaLeft: 0, alphaRight: 123, alphaBottom: 117, maxSize: 50 },
 ] as const;

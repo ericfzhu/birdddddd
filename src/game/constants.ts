@@ -11,6 +11,7 @@ export const PLAYER_HEIGHT = 12;
 export const HITBOX_INSET = 2;
 export const TERRAIN_SPIKE_COLLISION_RATIO = 0.75;
 export const SANDJET_NOZZLE_DEPTH = 14;
+export const FLAME_VENT_DEPTH = 14;
 export const GRAVITY_ACCELERATION = 420;
 export const MAX_VERTICAL_SPEED = 155;
 export const FLIP_DEBOUNCE_SECONDS = 0.08;

@@ -6,6 +6,7 @@ import {
   CHAPTERS,
   COLORS,
   FIXED_STEP_SECONDS,
+  FLAME_VENT_DEPTH,
   PLAY_BOTTOM,
   PLAY_TOP,
   PLAYER_HEIGHT,
@@ -955,6 +956,42 @@ export class AviaryScene extends Phaser.Scene {
         continue;
       }
 
+      if (rect.kind === "flame") {
+        const active = rect.active !== false;
+        const ceiling = rect.attachment === "ceiling" || rect.flipY === true;
+        const centerX = Math.round(rect.x + rect.w / 2);
+        const layout = sandJetVisualLayout(rect.y, rect.h, FLAME_VENT_DEPTH, ceiling);
+        const warningSprite = active
+          ? takeSprite(interactiveDangerTextureKey(rect.chapter, "flame-plume"))
+          : undefined;
+        const plumeSprite = active
+          ? takeSprite(interactiveTextureKey(rect.chapter, "flame-plume"))
+          : undefined;
+        const ventSprite = takeSprite(interactiveTextureKey(rect.chapter, "flame-warning"));
+        if (!ventSprite || (active && (!warningSprite || !plumeSprite))) {
+          warningSprite?.setVisible(false);
+          plumeSprite?.setVisible(false);
+          ventSprite?.setVisible(false);
+          continue;
+        }
+        if (warningSprite && plumeSprite) {
+          plumeSprite
+            .setOrigin(0.5, layout.originY)
+            .setDisplaySize(rect.w + 8, rect.h - FLAME_VENT_DEPTH + 4)
+            .setPosition(centerX, Math.round(layout.openingY))
+            .setFlipY(layout.flipY);
+          this.syncDangerSilhouette(warningSprite, plumeSprite);
+        }
+        ventSprite
+          .setOrigin(0.5, layout.originY)
+          .setDisplaySize(rect.w + 10, 16)
+          .setPosition(centerX, Math.round(layout.baseY))
+          .setAlpha(1)
+          .setFlipY(layout.flipY);
+        this.authoredRects.add(rect);
+        continue;
+      }
+
       const asset = authoredAssetForHazard(rect.chapter, rect.kind);
       if (!asset) continue;
       const texture = interactiveTextureKey(rect.chapter, asset);
@@ -973,15 +1010,6 @@ export class AviaryScene extends Phaser.Scene {
 
       if (rect.kind === "vine") {
         sprite.setOrigin(0.5, 0).setDisplaySize(rect.w + 6, rect.h + 2).setPosition(centerX, Math.round(rect.y));
-      } else if (rect.kind === "flame") {
-        const ceiling = rect.attachment === "ceiling" || rect.flipY === true;
-        const flameAsset = rect.active === false ? "flame-warning" : "flame";
-        sprite
-          .setTexture(interactiveTextureKey(rect.chapter, flameAsset))
-          .setOrigin(0.5, 1)
-          .setDisplaySize(rect.w + 8, rect.active === false ? 14 : rect.h + 4)
-          .setPosition(centerX, Math.round(ceiling ? rect.y : rect.y + rect.h))
-          .setFlipY(ceiling);
       } else if (rect.kind === "shutter") {
         const width = rect.w + 6 + (family.emphasis?.shutterWidthBonus ?? 0);
         sprite.setOrigin(0.5, 0.5).setDisplaySize(width, rect.h + 4).setPosition(centerX, centerY);

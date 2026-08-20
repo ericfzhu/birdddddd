@@ -12,6 +12,29 @@ export interface SandJetVisualLayout {
   flipY: boolean;
 }
 
+export interface SurfaceEmitterVisualLayout {
+  baseY: number;
+  originY: 0 | 1;
+  flipY: boolean;
+}
+
+/**
+ * Anchors an upward-authored emitter to either tunnel surface. A ceiling
+ * emitter needs a top origin before flipping so it grows down into the
+ * corridor rather than upward behind the ceiling terrain.
+ */
+export function surfaceEmitterVisualLayout(
+  y: number,
+  height: number,
+  ceiling: boolean,
+): SurfaceEmitterVisualLayout {
+  return {
+    baseY: ceiling ? y : y + height,
+    originY: ceiling ? 0 : 1,
+    flipY: ceiling,
+  };
+}
+
 /**
  * Anchors a sand-jet assembly to the terrain edge it grows from. Ceiling jets
  * must use a top origin before being flipped so their sprites extend into the
