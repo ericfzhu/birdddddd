@@ -60,6 +60,8 @@ export class GameModel {
   private events: GameEvent[] = [];
   private lastChunkId = "";
   private pendingTransition?: { from: number; to: number };
+  private parallaxTransitionId = "";
+  private outgoingChapterDistance = 0;
 
   constructor(seed = 0x51a7e, bestScore = 0, startingChapter = 0) {
     this.seed = seed >>> 0;
@@ -93,6 +95,8 @@ export class GameModel {
     this.chunks = [];
     this.lastChunkId = "";
     this.pendingTransition = undefined;
+    this.parallaxTransitionId = "";
+    this.outgoingChapterDistance = 0;
     this.populateInitialChunks();
   }
 
@@ -136,6 +140,7 @@ export class GameModel {
     const speed = CHAPTERS[this.chapter]?.speed ?? CHAPTERS[0].speed;
     this.distance += speed * dt;
     this.chapterDistance += speed * dt;
+    this.syncParallaxTransition();
     this.velocityY = clamp(
       this.velocityY + this.gravity * GRAVITY_ACCELERATION * dt,
       -MAX_VERTICAL_SPEED,
@@ -265,13 +270,26 @@ export class GameModel {
     const transition = active?.definition.transition;
     if (!active || !transition) return undefined;
     const localX = this.distance + this.playerX - active.startX;
+    const transitionStarted = active.definition.id === this.parallaxTransitionId;
     return {
       id: active.definition.id,
       from: transition.from,
       to: transition.to,
+      fromDistance: transitionStarted ? this.outgoingChapterDistance : this.chapterDistance,
+      toDistance: transitionStarted ? this.chapterDistance : 0,
       progress: clamp(localX / active.definition.width, 0, 1),
       active: localX >= 0 && localX <= active.definition.width,
     };
+  }
+
+  private syncParallaxTransition(): void {
+    const active = this.chunks.find((chunk) => chunk.definition.transition);
+    if (!active || active.definition.id === this.parallaxTransitionId) return;
+    const localX = this.distance + this.playerX - active.startX;
+    if (localX < 0) return;
+    this.outgoingChapterDistance = Math.max(0, this.chapterDistance - localX);
+    this.chapterDistance = Math.max(0, localX);
+    this.parallaxTransitionId = active.definition.id;
   }
 
   textSnapshot(): string {
@@ -541,7 +559,6 @@ export class GameModel {
         if (nextChapter !== this.chapter) {
           const previousChapter = this.chapter;
           this.chapter = nextChapter;
-          this.chapterDistance = 0;
           this.pendingTransition = { from: previousChapter, to: nextChapter };
           this.pruneUnseenQueue();
           this.events.push({ type: "chapter", chapter: this.chapter });

@@ -128,6 +128,8 @@ export interface ChapterTransitionState {
   id: string;
   from: number;
   to: number;
+  fromDistance: number;
+  toDistance: number;
   progress: number;
   active: boolean;
 }

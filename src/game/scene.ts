@@ -431,6 +431,9 @@ export class AviaryScene extends Phaser.Scene {
     const from = transition?.from ?? this.model.chapter;
     const to = transition?.to ?? from;
     const progress = transition?.progress ?? 0;
+    const fromDistance = transition?.fromDistance ?? this.model.chapterDistance;
+    const toDistance = transition?.toDistance ?? this.model.chapterDistance;
+    const parallaxDistanceFor = (chapter: number) => chapter === from ? fromDistance : toDistance;
     const fromChapter = CHAPTERS[from] ?? CHAPTERS[0];
     const toChapter = CHAPTERS[to] ?? fromChapter;
     const bg = this.background;
@@ -449,20 +452,22 @@ export class AviaryScene extends Phaser.Scene {
       if (alpha <= 0) continue;
       if (chapter === 0 || chapter === 2) {
         const parallax = chapter === 0
-          ? verdantParallaxState(this.model.chapterDistance, this.cameraOffsetY, this.settings.reducedMotion)
-          : desertParallaxState(this.model.chapterDistance, this.cameraOffsetY, this.settings.reducedMotion);
+          ? verdantParallaxState(parallaxDistanceFor(chapter), this.cameraOffsetY, this.settings.reducedMotion)
+          : desertParallaxState(parallaxDistanceFor(chapter), this.cameraOffsetY, this.settings.reducedMotion);
         this.applyParallaxCrop(image, parallax.far);
       } else {
         image.setCrop().setDisplaySize(VIEW_WIDTH, VIEW_HEIGHT);
       }
     }
     const verdantAlpha = from === 0 ? 1 - progress : to === 0 ? progress : 0;
-    const parallax = verdantParallaxState(this.model.chapterDistance, this.cameraOffsetY, this.settings.reducedMotion);
+    const verdantDistance = from === 0 ? fromDistance : toDistance;
+    const parallax = verdantParallaxState(verdantDistance, this.cameraOffsetY, this.settings.reducedMotion);
     this.renderParallaxLayer(this.verdantMidground, parallax.mid, verdantAlpha);
     this.renderParallaxLayer(this.verdantNear, parallax.near, verdantAlpha);
 
     const desertAlpha = from === 2 ? 1 - progress : to === 2 ? progress : 0;
-    const desertParallax = desertParallaxState(this.model.chapterDistance, this.cameraOffsetY, this.settings.reducedMotion);
+    const desertDistance = from === 2 ? fromDistance : toDistance;
+    const desertParallax = desertParallaxState(desertDistance, this.cameraOffsetY, this.settings.reducedMotion);
     this.renderParallaxLayer(this.desertMidground, desertParallax.mid, desertAlpha);
     this.renderParallaxLayer(this.desertNear, desertParallax.near, desertAlpha);
   }

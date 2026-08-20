@@ -601,19 +601,29 @@ describe("birdddddd model", () => {
     model.step();
 
     expect(model.chapter).toBe(1);
-    expect(model.chapterDistance).toBe(0);
+    expect(model.chapterDistance).toBeCloseTo(640 + CHAPTERS[0].speed * FIXED_STEP_SECONDS, 5);
     expect(model.gates).toBe(CHAPTERS[1].at);
     const passage = model.chunks.find((active) => active.definition.transition);
     expect(passage?.definition.id).toBe(TRANSITION_CHUNKS[0]?.id);
     expect(model.chapterTransition()?.progress).toBe(0);
+    expect(model.chapterTransition()?.fromDistance).toBe(model.chapterDistance);
+    expect(model.chapterTransition()?.toDistance).toBe(0);
 
     if (!passage) throw new Error("Expected a transition passage");
+    model.distance = passage.startX - PLAYER_X;
+    model.chapterDistance = 700;
+    model.step();
+    expect(model.chapterTransition()?.fromDistance).toBeCloseTo(700, 5);
+    expect(model.chapterTransition()?.toDistance).toBeCloseTo(CHAPTERS[1].speed * FIXED_STEP_SECONDS, 5);
+
     model.distance = passage.startX - PLAYER_X + passage.definition.width / 2;
     expect(model.chapterTransition()).toMatchObject({ from: 0, to: 1, active: true });
     expect(model.chapterTransition()?.progress).toBeCloseTo(0.5, 5);
 
+    const frozenOutgoingDistance = model.chapterTransition()?.fromDistance;
     model.step();
-    expect(model.chapterDistance).toBeCloseTo(CHAPTERS[1].speed * FIXED_STEP_SECONDS, 5);
+    expect(model.chapterTransition()?.fromDistance).toBe(frozenOutgoingDistance);
+    expect(model.chapterTransition()?.toDistance).toBeCloseTo(CHAPTERS[1].speed * FIXED_STEP_SECONDS * 2, 5);
 
     model.distance = passage.startX - PLAYER_X + passage.definition.width + 1;
     model.step();
