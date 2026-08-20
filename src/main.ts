@@ -2,6 +2,7 @@ import { RENDER_DENSITY, VIEW_HEIGHT, VIEW_WIDTH } from "./game/constants";
 import { shouldGateForPortrait, type MobileViewportSignals } from "./mobile";
 import "./styles.css";
 
+function bootGamePage(): void {
 const gameContent = document.querySelector<HTMLElement>("#game-content");
 const rotatePrompt = document.querySelector<HTMLElement>("#rotate-prompt");
 const loadingScreen = document.querySelector<HTMLElement>("#loading-screen");
@@ -118,3 +119,10 @@ window.matchMedia("(orientation: portrait)").addEventListener("change", syncOrie
 window.addEventListener("resize", syncOrientationGate);
 window.visualViewport?.addEventListener("resize", syncOrientationGate);
 syncOrientationGate();
+}
+
+if (window.location.pathname.replace(/\/+$/, "") === "/test") {
+  void import("./test-ground").then(({ mountTestGround }) => mountTestGround());
+} else {
+  bootGamePage();
+}

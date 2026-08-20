@@ -63,14 +63,14 @@ export class GameModel {
   private parallaxTransitionId = "";
   private outgoingChapterDistance = 0;
 
-  constructor(seed = 0x51a7e, bestScore = 0, startingChapter = 0) {
+  constructor(seed = 0x51a7e, bestScore = 0, startingChapter = 0, startingChunkId?: string) {
     this.seed = seed >>> 0;
     this.rngState = this.seed;
     this.bestScore = bestScore;
     this.chapter = clamp(Math.floor(startingChapter), 0, CHAPTERS.length - 1);
     this.gates = CHAPTERS[this.chapter]?.at ?? 0;
     this.score = this.gates;
-    this.populateInitialChunks();
+    this.populateInitialChunks(startingChunkId);
   }
 
   reset(nextSeed = (this.seed + 0x9e3779b9) >>> 0): void {
@@ -411,10 +411,10 @@ export class GameModel {
         const left = origin + solid.x;
         if (this.playerX + halfWidth <= left || this.playerX - halfWidth >= left + solid.w) continue;
         const solidY = solid.y + tunnelOffsetAt(active.definition, solid.x + solid.w / 2);
-        if (this.gravity === 1) {
+        if (this.velocityY >= 0) {
           const previousBottom = previousY + halfHeight;
           const currentBottom = this.playerY + halfHeight;
-          if (previousBottom <= solidY && currentBottom >= solidY && this.velocityY >= 0) {
+          if (previousBottom <= solidY && currentBottom >= solidY) {
             this.playerY = solidY - halfHeight;
             const landed = this.velocityY > 35;
             this.velocityY = 0;
@@ -424,7 +424,7 @@ export class GameModel {
           const underside = solidY + solid.h;
           const previousTop = previousY - halfHeight;
           const currentTop = this.playerY - halfHeight;
-          if (previousTop >= underside && currentTop <= underside && this.velocityY <= 0) {
+          if (previousTop >= underside && currentTop <= underside) {
             this.playerY = underside + halfHeight;
             const landed = this.velocityY < -35;
             this.velocityY = 0;
@@ -593,11 +593,17 @@ export class GameModel {
     this.lastChunkId = this.chunks.at(-1)?.definition.id ?? "";
   }
 
-  private populateInitialChunks(): void {
-    let startX = 240;
+  private populateInitialChunks(startingChunkId?: string): void {
+    const requestedChunk = startingChunkId
+      ? chunksForChapter(this.chapter).find((candidate) => candidate.id === startingChunkId)
+      : undefined;
+    let startX = requestedChunk ? 130 : 240;
     for (let i = 0; i < 5; i += 1) {
       const previous = this.chunks.at(-1)?.definition;
-      const definition = this.chooseChunk(this.chapter, previous?.exit);
+      const definition = i === 0 && requestedChunk
+        ? requestedChunk
+        : this.chooseChunk(this.chapter, previous?.exit);
+      if (i === 0 && requestedChunk) this.lastChunkId = requestedChunk.id;
       this.chunks.push({
         definition,
         startX,

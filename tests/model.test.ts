@@ -54,6 +54,13 @@ const activate = (definition: ChunkDefinition, startX = 0): ActiveChunk => ({
 });
 
 describe("birdddddd model", () => {
+  it("can place a requested authored chunk first for direct test-ground previews", () => {
+    const model = new GameModel(123, 0, 2, "clock-perches");
+    expect(model.chapter).toBe(2);
+    expect(model.chunks[0]?.definition.id).toBe("clock-perches");
+    expect(model.chunks[0]?.startX).toBe(130);
+  });
+
   it("keeps the player inside a small vertical camera dead zone while preserving world position", () => {
     const upwardTarget = cameraTargetY(0, 40, "playing");
     const downwardTarget = cameraTargetY(0, 140, "playing");
@@ -468,6 +475,44 @@ describe("birdddddd model", () => {
     expect(landing.mode).toBe("playing");
     expect(landing.velocityY).toBe(0);
     expect(landing.isGrounded()).toBe(true);
+  });
+
+  it("resolves platform faces from momentum when velocity and gravity disagree", () => {
+    const topContactChunk: ChunkDefinition = {
+      ...safeChunk(),
+      id: "test-perch-opposite-gravity-top",
+      solids: [{ x: 45, y: 100, w: 80, h: 6, detail: "perch" }],
+    };
+    const fallingAgainstUpwardGravity = new GameModel(871);
+    fallingAgainstUpwardGravity.chunks = [activate(topContactChunk)];
+    fallingAgainstUpwardGravity.mode = "playing";
+    fallingAgainstUpwardGravity.gravity = -1;
+    fallingAgainstUpwardGravity.playerY = 95.5;
+    fallingAgainstUpwardGravity.velocityY = 70;
+
+    fallingAgainstUpwardGravity.step();
+    expect(fallingAgainstUpwardGravity.mode).toBe("playing");
+    expect(fallingAgainstUpwardGravity.playerX).toBe(PLAYER_X);
+    expect(fallingAgainstUpwardGravity.playerY).toBe(96);
+    expect(fallingAgainstUpwardGravity.velocityY).toBe(0);
+
+    const undersideContactChunk: ChunkDefinition = {
+      ...safeChunk(),
+      id: "test-perch-opposite-gravity-underside",
+      solids: [{ x: 45, y: 80, w: 80, h: 6, detail: "perch" }],
+    };
+    const risingAgainstDownwardGravity = new GameModel(872);
+    risingAgainstDownwardGravity.chunks = [activate(undersideContactChunk)];
+    risingAgainstDownwardGravity.mode = "playing";
+    risingAgainstDownwardGravity.gravity = 1;
+    risingAgainstDownwardGravity.playerY = 90.5;
+    risingAgainstDownwardGravity.velocityY = -70;
+
+    risingAgainstDownwardGravity.step();
+    expect(risingAgainstDownwardGravity.mode).toBe("playing");
+    expect(risingAgainstDownwardGravity.playerX).toBe(PLAYER_X);
+    expect(risingAgainstDownwardGravity.playerY).toBe(90);
+    expect(risingAgainstDownwardGravity.velocityY).toBe(0);
   });
 
   it("treats a floating spinner as lethal terrain", () => {

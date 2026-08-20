@@ -170,9 +170,15 @@ export class AviaryScene extends Phaser.Scene {
     const query = new URLSearchParams(window.location.search);
     const requestedSeed = Number(query.get("seed"));
     const requestedChapter = query.get("previewChapter");
+    const requestedChunk = query.get("previewChunk") ?? undefined;
     const previewChapter = requestedChapter === null ? (import.meta.env.DEV ? 2 : 0) : Number(requestedChapter);
     const seed = Number.isFinite(requestedSeed) && requestedSeed > 0 ? requestedSeed >>> 0 : (Date.now() ^ 0x51a7e) >>> 0;
-    this.model = new GameModel(seed, this.settings.bestScore, Number.isFinite(previewChapter) ? previewChapter : 0);
+    this.model = new GameModel(
+      seed,
+      this.settings.bestScore,
+      Number.isFinite(previewChapter) ? previewChapter : 0,
+      requestedChunk,
+    );
     this.model.reducedMotion = this.settings.reducedMotion;
 
     this.background = this.add.graphics();
@@ -1177,7 +1183,7 @@ export class AviaryScene extends Phaser.Scene {
     if (this.pulse > 0) {
       const max = this.settings.reducedMotion ? 0.04 : 0.2;
       g.fillStyle(COLORS.cream, (this.pulse / max) * 0.08);
-      g.fillRect(0, PLAY_TOP, VIEW_WIDTH, PLAY_BOTTOM - PLAY_TOP);
+      g.fillRect(0, 0, VIEW_WIDTH, VIEW_HEIGHT);
     }
   }
 

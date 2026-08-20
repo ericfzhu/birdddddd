@@ -73,14 +73,14 @@ function collidesHazard(state: SolverState, progress: number, hazard: HazardSpec
 function resolveSolid(state: SolverState, previousY: number, progress: number, solid: SolidSpec, tunnelOffset: number): boolean {
   if (progress + halfW <= solid.x || progress - halfW >= solid.x + solid.w) return false;
   const solidY = solid.y + tunnelOffset;
-  if (state.gravity === 1) {
-    if (previousY + halfH <= solidY && state.y + halfH >= solidY && state.vy >= 0) {
+  if (state.vy >= 0) {
+    if (previousY + halfH <= solidY && state.y + halfH >= solidY) {
       state.y = solidY - halfH;
       state.vy = 0;
     }
   } else {
     const underside = solidY + solid.h;
-    if (previousY - halfH >= underside && state.y - halfH <= underside && state.vy <= 0) {
+    if (previousY - halfH >= underside && state.y - halfH <= underside) {
       state.y = underside + halfH;
       state.vy = 0;
     }
