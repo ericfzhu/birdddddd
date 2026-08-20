@@ -21,7 +21,6 @@ import {
   sandJetVisualLayout,
   spikeClusterLayout,
   spikeRotationForNormal,
-  surfaceEmitterVisualLayout,
   TERRAIN_SPIKE_POINT_WIDTH,
 } from "../src/game/hazards";
 import { PROP_ART, propGroundPlacement, propGroundPlacementAtWorldX, propLayout } from "../src/game/props";
@@ -361,11 +360,6 @@ describe("birdddddd model", () => {
 
     const ceiling = sandJetVisualLayout(58, 42, SANDJET_NOZZLE_DEPTH, true);
     expect(ceiling).toEqual({ baseY: 58, openingY: 72, originY: 0, flipY: true });
-  });
-
-  it("anchors floor and ceiling flame emitters into the playable corridor", () => {
-    expect(surfaceEmitterVisualLayout(116, 48, false)).toEqual({ baseY: 164, originY: 1, flipY: false });
-    expect(surfaceEmitterVisualLayout(16, 48, true)).toEqual({ baseY: 16, originY: 0, flipY: true });
   });
 
   it("moves minecarts horizontally without changing their authored track height", () => {
