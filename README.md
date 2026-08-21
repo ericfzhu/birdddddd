@@ -14,6 +14,12 @@ The game is designed for landscape screens. On phone-sized touch devices held in
 
 In landscape, the game host fills the browser viewport by default. The fixed 16:9 playfield is aspect-fitted against a matching background so gameplay geometry remains undistorted on unusually wide or tall screens. Browser-native fullscreen is still available with **F**.
 
+## Install and offline play
+
+On supported browsers, install **birdddddd** from the browser's install or “Add to Home Screen” action. The installed app uses the bird icon, opens fullscreen, and requests landscape orientation.
+
+The service worker caches the app shell immediately and warms the complete game cache after the first successful online load. Once the loading screen has finished online, the installed game can be launched again without a network connection. A newly deployed version refreshes the cached app shell on the next online visit while preserving the local best score and settings.
+
 ## Development
 
 Node.js 22.12 or newer and Yarn 3.6.3 are required. With NVM installed:

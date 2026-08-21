@@ -1,0 +1,33 @@
+{
+  "id": "/",
+  "name": "birdddddd",
+  "short_name": "birdddddd",
+  "description": "A one-button gravity-flipping arcade game.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#211a1d",
+  "theme_color": "#211a1d",
+  "categories": ["games", "entertainment"],
+  "icons": [
+    {
+      "src": "/icons/birdddddd-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/birdddddd-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/birdddddd-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

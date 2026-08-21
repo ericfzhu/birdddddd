@@ -2,6 +2,51 @@ import { RENDER_DENSITY, VIEW_HEIGHT, VIEW_WIDTH } from "./game/constants";
 import { shouldGateForPortrait, type MobileViewportSignals } from "./mobile";
 import "./styles.css";
 
+function waitForGameReady(): Promise<void> {
+  if (document.documentElement.classList.contains("game-ready")) return Promise.resolve();
+  return new Promise((resolve) => {
+    const observer = new MutationObserver(() => {
+      if (!document.documentElement.classList.contains("game-ready")) return;
+      observer.disconnect();
+      resolve();
+    });
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
+  });
+}
+
+async function warmOfflineCache(registration: ServiceWorkerRegistration): Promise<void> {
+  if (window.location.pathname.replace(/\/+$/, "") === "/test") return;
+  await waitForGameReady();
+  const worker = registration.active;
+  if (!worker) return;
+  const urls = new Set<string>([new URL("/", window.location.origin).href]);
+  for (const entry of performance.getEntriesByType("resource")) {
+    const url = new URL(entry.name, window.location.href);
+    if (url.origin === window.location.origin) urls.add(url.href);
+  }
+  await new Promise<void>((resolve) => {
+    const channel = new MessageChannel();
+    const timeout = window.setTimeout(resolve, 30000);
+    channel.port1.onmessage = () => {
+      window.clearTimeout(timeout);
+      resolve();
+    };
+    worker.postMessage({ type: "CACHE_URLS", urls: [...urls] }, [channel.port2]);
+  });
+}
+
+function registerServiceWorker(): void {
+  if (!import.meta.env.PROD || !("serviceWorker" in navigator)) return;
+  window.addEventListener("load", () => {
+    void navigator.serviceWorker.register("/sw.js", { scope: "/" })
+      .then(() => navigator.serviceWorker.ready)
+      .then((registration) => warmOfflineCache(registration))
+      .catch((error: unknown) => {
+        console.warn("birdddddd could not enable offline play.", error);
+      });
+  }, { once: true });
+}
+
 function bootGamePage(): void {
 const gameContent = document.querySelector<HTMLElement>("#game-content");
 const rotatePrompt = document.querySelector<HTMLElement>("#rotate-prompt");
@@ -126,3 +171,5 @@ if (window.location.pathname.replace(/\/+$/, "") === "/test") {
 } else {
   bootGamePage();
 }
+
+registerServiceWorker();
