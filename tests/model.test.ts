@@ -36,6 +36,7 @@ import {
   transitionArtFor,
 } from "../src/game/interactive-art";
 import type { ActiveChunk, ChunkDefinition } from "../src/game/types";
+import { logicalViewportWidth } from "../src/viewport";
 
 const safeChunk = (feathers: Array<{ x: number; y: number }> = []): ChunkDefinition => ({
   id: "test-safe",
@@ -57,6 +58,29 @@ const activate = (definition: ChunkDefinition, startX = 0): ActiveChunk => ({
 });
 
 describe("birdddddd model", () => {
+  it("expands only the horizontal view on wider landscape displays", () => {
+    expect(logicalViewportWidth(1280, 720)).toBe(320);
+    expect(logicalViewportWidth(844, 390)).toBe(390);
+    expect(logicalViewportWidth(2560, 1080)).toBe(420);
+    expect(logicalViewportWidth(1024, 768)).toBe(320);
+  });
+
+  it("uses the expanded width for visibility and generated lookahead", () => {
+    const distantPlatform: ChunkDefinition = {
+      ...safeChunk(),
+      width: 500,
+      solids: [{ x: 350, y: 80, w: 12, h: 8, detail: "perch" }],
+    };
+    const model = new GameModel(120, 0, 0, undefined, 320);
+    model.chunks = [activate(distantPlatform)];
+    expect(model.visibleRects()).toHaveLength(0);
+
+    model.setViewportWidth(390);
+    expect(model.visibleRects()).toHaveLength(1);
+    expect(model.visibleTunnelPoints().at(-1)?.x).toBeGreaterThanOrEqual(390);
+    expect(JSON.parse(model.textSnapshot()).viewport).toEqual({ width: 390, height: 180 });
+  });
+
   it("can place a requested authored chunk first for direct test-ground previews", () => {
     const model = new GameModel(123, 0, 3, "clock-perches");
     expect(model.chapter).toBe(3);
@@ -853,6 +877,19 @@ describe("birdddddd model", () => {
         expect(layer.x + layer.width).toBeLessThanOrEqual(512);
         expect(layer.y + layer.height).toBeLessThanOrEqual(288);
       }
+    }
+  });
+
+  it("reveals more authored parallax art instead of stretching the 16:9 crop", () => {
+    const standard = biomeParallaxState(0, 0, 0, false, 320);
+    const wide = biomeParallaxState(0, 0, 0, false, 390);
+    expect(wide.far.width).toBeGreaterThan(standard.far.width);
+    expect(wide.mid.width).toBeGreaterThan(standard.mid.width);
+    expect(wide.near.width).toBeGreaterThan(standard.near.width);
+    for (const layer of [wide.far, wide.mid, wide.near]) {
+      expect(layer.width / layer.height).toBeCloseTo(390 / 180, 2);
+      expect(layer.width).toBeLessThanOrEqual(512);
+      expect(layer.height).toBeLessThanOrEqual(288);
     }
   });
 

@@ -7,6 +7,7 @@
 }
 
 :root {
+  --game-aspect: 1.7777778;
   color-scheme: dark;
   font-family: ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, monospace;
   background: #211a1d;
@@ -79,10 +80,10 @@ canvas {
   position: absolute;
   top: 50%;
   left: 50%;
-  width: min(100dvw, 177.7778dvh);
-  height: min(100dvh, 56.25dvw);
+  width: min(100dvw, calc(100dvh * var(--game-aspect)));
+  height: min(100dvh, calc(100dvw / var(--game-aspect)));
   overflow: hidden;
-  container-type: inline-size;
+  container-type: size;
   pointer-events: none;
   transform: translate(-50%, -50%);
 }
@@ -98,7 +99,7 @@ canvas {
 .hud-control {
   position: absolute;
   top: 9.4444%;
-  width: 9.375%;
+  width: 16.6667cqh;
   height: 11.1111%;
   margin: 0;
   padding: 0;
@@ -123,11 +124,11 @@ canvas {
 }
 
 .hud-control-pause {
-  right: 13.125%;
+  right: 23.3333cqh;
 }
 
 .hud-control-sound {
-  right: 1.875%;
+  right: 3.3333cqh;
 }
 
 .hud-control-icon {
@@ -195,28 +196,28 @@ canvas {
 .hud-title {
   color: #fff9e9;
   font-family: "Pixelify Sans", ui-monospace, monospace;
-  font-size: 5.625cqw;
+  font-size: 10cqh;
   font-weight: 700;
   letter-spacing: 0.035em;
 }
 
 .hud-prompt {
   font-family: "Pixelify Sans", ui-monospace, monospace;
-  font-size: 2.8125cqw;
+  font-size: 5cqh;
   font-weight: 600;
   letter-spacing: 0.06em;
 }
 
 .hud-score {
   color: #fff9e9;
-  font-size: 4.6875cqw;
+  font-size: 8.3333cqh;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
 
 .hud-chapter,
 .hud-helper {
-  font-size: 2.5cqw;
+  font-size: 4.4444cqh;
 }
 
 .hud-chapter {
@@ -225,7 +226,7 @@ canvas {
 
 .hud-result {
   color: #fff9e9;
-  font-size: 5cqw;
+  font-size: 8.8889cqh;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }

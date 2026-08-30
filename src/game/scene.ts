@@ -128,6 +128,7 @@ export class AviaryScene extends Phaser.Scene {
   private bannerChapter = 0;
   private lastTransitionId = "";
   private particles: FeatherParticle[] = [];
+  private viewportWidth = VIEW_WIDTH;
 
   constructor() {
     super("aviary");
@@ -166,6 +167,7 @@ export class AviaryScene extends Phaser.Scene {
   }
 
   create(): void {
+    this.viewportWidth = Math.round(this.scale.gameSize.width / RENDER_DENSITY);
     this.cameras.main.setOrigin(0, 0).setZoom(RENDER_DENSITY).setRoundPixels(true);
     const dangerColor = `#${DANGER_RED.toString(16).padStart(6, "0")}`;
     INTERACTIVE_ART.forEach((family, chapter) => {
@@ -192,12 +194,13 @@ export class AviaryScene extends Phaser.Scene {
       this.settings.bestScore,
       Number.isFinite(previewChapter) ? previewChapter : 0,
       requestedChunk,
+      this.viewportWidth,
     );
     this.model.reducedMotion = this.settings.reducedMotion;
 
     this.background = this.add.graphics();
     for (let chapter = 0; chapter < CHAPTERS.length; chapter += 1) {
-      const image = this.add.image(0, 0, `biome-background-${chapter}`).setOrigin(0, 0).setDisplaySize(VIEW_WIDTH, VIEW_HEIGHT).setVisible(false);
+      const image = this.add.image(0, 0, `biome-background-${chapter}`).setOrigin(0, 0).setVisible(false);
       this.biomeBackgrounds.push(image);
     }
     for (let chapter = 0; chapter < CHAPTERS.length; chapter += 1) {
@@ -238,10 +241,19 @@ export class AviaryScene extends Phaser.Scene {
     this.helperText = new HudText("hud-helper", 124);
 
     this.audio = new AudioDirector(this, this.settings.muted);
+    this.scale.on(Phaser.Scale.Events.RESIZE, this.handleViewportResize, this);
     this.bindInput();
     this.installTestHooks();
     this.renderFrame();
     window.dispatchEvent(new Event("birdddddd:scene-ready"));
+  }
+
+  private handleViewportResize(gameSize: Phaser.Structs.Size): void {
+    const nextWidth = Math.round(gameSize.width / RENDER_DENSITY);
+    if (nextWidth === this.viewportWidth) return;
+    this.viewportWidth = nextWidth;
+    this.model.setViewportWidth(nextWidth);
+    this.renderFrame();
   }
 
   private createSolidSilhouetteTexture(sourceKey: string, targetKey: string, color: string, padding: number): void {
@@ -318,11 +330,11 @@ export class AviaryScene extends Phaser.Scene {
     this.input.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
       const x = pointer.worldX;
       const y = pointer.worldY;
-      if (y <= 38 && x >= 282) {
+      if (y <= 38 && x >= this.viewportWidth - 38) {
         this.toggleMute();
         return;
       }
-      if (y <= 38 && x >= 246) {
+      if (y <= 38 && x >= this.viewportWidth - 74) {
         this.togglePause();
         return;
       }
@@ -469,7 +481,7 @@ export class AviaryScene extends Phaser.Scene {
       defeated.vy += 250 * delta;
       defeated.rotation += defeated.angularVelocity * delta;
     }
-    const expired = this.defeatedWalkers.filter((defeated) => defeated.life <= 0 || defeated.y > VIEW_HEIGHT + 48 || defeated.x < -48 || defeated.x > VIEW_WIDTH + 48);
+    const expired = this.defeatedWalkers.filter((defeated) => defeated.life <= 0 || defeated.y > VIEW_HEIGHT + 48 || defeated.x < -48 || defeated.x > this.viewportWidth + 48);
     for (const defeated of expired) defeated.sprite.destroy();
     this.defeatedWalkers = this.defeatedWalkers.filter((defeated) => !expired.includes(defeated));
   }
@@ -533,10 +545,10 @@ export class AviaryScene extends Phaser.Scene {
     const bg = this.background;
     bg.clear();
     bg.fillStyle(fromChapter.shade, 1);
-    bg.fillRect(0, 0, VIEW_WIDTH, VIEW_HEIGHT);
+    bg.fillRect(0, 0, this.viewportWidth, VIEW_HEIGHT);
     if (to !== from && progress > 0) {
       bg.fillStyle(toChapter.shade, progress);
-      bg.fillRect(0, 0, VIEW_WIDTH, VIEW_HEIGHT);
+      bg.fillRect(0, 0, this.viewportWidth, VIEW_HEIGHT);
     }
     for (const [chapter, image] of this.biomeBackgrounds.entries()) {
       let alpha = 0;
@@ -549,6 +561,7 @@ export class AviaryScene extends Phaser.Scene {
         parallaxDistanceFor(chapter),
         this.cameraOffsetY,
         this.settings.reducedMotion,
+        this.viewportWidth,
       );
       this.applyParallaxCrop(image, parallax.far);
     }
@@ -559,6 +572,7 @@ export class AviaryScene extends Phaser.Scene {
         parallaxDistanceFor(chapter),
         this.cameraOffsetY,
         this.settings.reducedMotion,
+        this.viewportWidth,
       );
       this.renderParallaxLayer(this.biomeMidgrounds[chapter]!, parallax.mid, alpha);
       this.renderParallaxLayer(this.biomeNears[chapter]!, parallax.near, alpha);
@@ -566,7 +580,7 @@ export class AviaryScene extends Phaser.Scene {
   }
 
   private applyParallaxCrop(image: Phaser.GameObjects.Image, crop: ParallaxCrop): void {
-    const scaleX = VIEW_WIDTH / crop.width;
+    const scaleX = this.viewportWidth / crop.width;
     const scaleY = VIEW_HEIGHT / crop.height;
     image
       .setCrop(crop.x, crop.y, crop.width, crop.height)
@@ -624,7 +638,7 @@ export class AviaryScene extends Phaser.Scene {
   private renderTunnelPoints(step = 4): VisibleTunnelPoint[] {
     const points: VisibleTunnelPoint[] = [];
     const firstWorldX = Math.floor((this.model.distance - step) / step) * step;
-    const lastWorldX = this.model.distance + VIEW_WIDTH + step;
+    const lastWorldX = this.model.distance + this.viewportWidth + step;
     for (let worldX = firstWorldX; worldX <= lastWorldX; worldX += step) {
       const offset = this.model.terrainOffsetAtWorldX(worldX);
       points.push({
@@ -674,7 +688,7 @@ export class AviaryScene extends Phaser.Scene {
     const tileSize = 8;
     const samplesPerAxis = 8;
     const firstWorldColumn = Math.floor((this.model.distance - tileSize) / tileSize);
-    const lastWorldColumn = Math.ceil((this.model.distance + VIEW_WIDTH + tileSize) / tileSize);
+    const lastWorldColumn = Math.ceil((this.model.distance + this.viewportWidth + tileSize) / tileSize);
     const visibleTop = -renderY - tileSize;
     const visibleBottom = VIEW_HEIGHT - renderY + tileSize;
     let poolIndex = 0;
@@ -744,7 +758,7 @@ export class AviaryScene extends Phaser.Scene {
         if (!art) continue;
         const worldX = chunk.startX + chunk.definition.width * 0.5;
         const x = screenXAtRenderDistance(worldX, this.renderDistance);
-        if (x < -48 || x > VIEW_WIDTH + 48) continue;
+        if (x < -48 || x > this.viewportWidth + 48) continue;
         const prop = this.propPool[propIndex++];
         if (!prop) continue;
         const floor = PLAY_BOTTOM + this.model.terrainOffsetAtWorldX(worldX);
@@ -762,7 +776,7 @@ export class AviaryScene extends Phaser.Scene {
       const localX = 72 + (idValue % 38);
       const worldX = chunk.startX + localX;
       const x = screenXAtRenderDistance(worldX, this.renderDistance);
-      if (x < -36 || x > VIEW_WIDTH + 36) continue;
+      if (x < -36 || x > this.viewportWidth + 36) continue;
       if (chunk.definition.decoration === "passage") continue;
       const prop = this.propPool[propIndex++];
       if (!prop) return;
@@ -792,7 +806,7 @@ export class AviaryScene extends Phaser.Scene {
       if (!chunk.definition.transition) continue;
       const left = screenXAtRenderDistance(chunk.startX, this.renderDistance);
       const right = left + chunk.definition.width;
-      if (right < -12 || left > VIEW_WIDTH + 12) continue;
+      if (right < -12 || left > this.viewportWidth + 12) continue;
       const start = left - ((left % 24 + 24) % 24);
       for (let x = start; x <= right; x += 24) {
         if (x < left || x > right) continue;
@@ -813,7 +827,7 @@ export class AviaryScene extends Phaser.Scene {
       if (chunk.definition.transition) continue;
       const worldX = chunk.startX + chunk.definition.width - 12;
       const x = screenXAtRenderDistance(worldX, this.renderDistance);
-      if (x < -8 || x > VIEW_WIDTH + 8) continue;
+      if (x < -8 || x > this.viewportWidth + 8) continue;
       const biome = BIOMES[chunk.definition.chapter] ?? BIOMES[0];
       const offset = this.model.terrainOffsetAtWorldX(worldX);
       const point = { ceiling: PLAY_TOP + offset, floor: PLAY_BOTTOM + offset };
@@ -1403,7 +1417,7 @@ export class AviaryScene extends Phaser.Scene {
     if (this.pulse > 0) {
       const max = this.settings.reducedMotion ? 0.04 : 0.2;
       g.fillStyle(COLORS.cream, (this.pulse / max) * 0.08);
-      g.fillRect(0, 0, VIEW_WIDTH, VIEW_HEIGHT);
+      g.fillRect(0, 0, this.viewportWidth, VIEW_HEIGHT);
     }
   }
 
@@ -1412,6 +1426,7 @@ export class AviaryScene extends Phaser.Scene {
     g.clear();
     const mode = this.model.mode;
     const revealDeathPanel = mode === "dead" && this.model.deathTimer >= 0.24;
+    const centerOffset = this.viewportWidth / 2 - VIEW_WIDTH / 2;
     this.scoreText.setText(String(this.model.score)).setVisible(mode === "playing" || mode === "paused");
     this.titleText.setVisible(mode === "ready");
     this.promptText.setVisible(mode === "ready");
@@ -1426,7 +1441,7 @@ export class AviaryScene extends Phaser.Scene {
       g.fillStyle(COLORS.yolk, 1);
       g.fillTriangle(PLAYER_X - 5, arrowY + 4, PLAYER_X + 5, arrowY + 4, PLAYER_X, arrowY - 3);
       g.fillRect(PLAYER_X - 1, arrowY + 3, 2, 8);
-      this.drawPixelPanel(g, 86, 36, 148, 93, 0);
+      this.drawPixelPanel(g, 86 + centerOffset, 36, 148, 93, 0);
     }
 
     this.drawTopButtonFrames(g);
@@ -1436,9 +1451,9 @@ export class AviaryScene extends Phaser.Scene {
       const alpha = Math.min(1, this.chapterBanner * 2);
       const biome = BIOMES[this.bannerChapter] ?? BIOMES[0];
       g.fillStyle(biome.terrainDark, 0.86 * alpha);
-      g.fillRect(82, 43, 156, 18);
+      g.fillRect(82 + centerOffset, 43, 156, 18);
       g.lineStyle(1, biome.accent, 0.7 * alpha);
-      g.strokeRect(82, 43, 156, 18);
+      g.strokeRect(82 + centerOffset, 43, 156, 18);
       this.chapterText.setText(`ENTERING · ${CHAPTERS[this.bannerChapter]?.name ?? ""}`).setAlpha(alpha).setVisible(true);
     } else {
       this.chapterText.setVisible(false);
@@ -1446,15 +1461,15 @@ export class AviaryScene extends Phaser.Scene {
 
     if (mode === "paused") {
       g.fillStyle(COLORS.ink, 0.84);
-      g.fillRect(0, PLAY_TOP, VIEW_WIDTH, PLAY_BOTTOM - PLAY_TOP);
+      g.fillRect(0, PLAY_TOP, this.viewportWidth, PLAY_BOTTOM - PLAY_TOP);
       g.fillStyle(COLORS.cream, 1);
-      g.fillRect(145, 65, 9, 28);
-      g.fillRect(166, 65, 9, 28);
+      g.fillRect(145 + centerOffset, 65, 9, 28);
+      g.fillRect(166 + centerOffset, 65, 9, 28);
       this.helperText.setText("PAUSED  ·  P OR TAP ⏸ TO RETURN").setY(112);
     }
 
     if (revealDeathPanel) {
-      this.drawPixelPanel(g, 82, 45, 156, 96, this.model.chapter);
+      this.drawPixelPanel(g, 82 + centerOffset, 45, 156, 96, this.model.chapter);
       this.resultText.setText(`SCORE ${this.model.score}\nBEST  ${this.model.bestScore}`);
       const ready = this.model.deathTimer >= 0.32;
       this.helperText.setText(ready ? "TAP TO TRY AGAIN" : "...").setY(122).setAlpha(ready ? 0.75 + Math.sin(this.uiTime * 5) * 0.2 : 0.5);
@@ -1472,11 +1487,11 @@ export class AviaryScene extends Phaser.Scene {
   private drawTopButtonFrames(g: Phaser.GameObjects.Graphics): void {
     const biome = BIOMES[this.model.chapter] ?? BIOMES[0];
     g.fillStyle(biome.terrainDark, 0.82);
-    g.fillRect(248, 17, 30, 20);
-    g.fillRect(284, 17, 30, 20);
+    g.fillRect(this.viewportWidth - 72, 17, 30, 20);
+    g.fillRect(this.viewportWidth - 36, 17, 30, 20);
     g.lineStyle(1, biome.surface, 0.7);
-    g.strokeRect(248, 17, 30, 20);
-    g.strokeRect(284, 17, 30, 20);
+    g.strokeRect(this.viewportWidth - 72, 17, 30, 20);
+    g.strokeRect(this.viewportWidth - 36, 17, 30, 20);
   }
 
   private drawPixelPanel(g: Phaser.GameObjects.Graphics, x: number, y: number, width: number, height: number, chapter: number): void {

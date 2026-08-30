@@ -1,5 +1,6 @@
-import { RENDER_DENSITY, VIEW_HEIGHT, VIEW_WIDTH } from "./game/constants";
+import { RENDER_DENSITY, VIEW_HEIGHT } from "./game/constants";
 import { shouldGateForPortrait, type MobileViewportSignals } from "./mobile";
+import { logicalViewportWidth, viewportAspect } from "./viewport";
 import "./styles.css";
 
 function waitForGameReady(): Promise<void> {
@@ -90,6 +91,19 @@ function viewportSignals(): MobileViewportSignals {
   };
 }
 
+function syncViewportSize(): number {
+  const signals = viewportSignals();
+  const logicalWidth = logicalViewportWidth(signals.width, signals.height);
+  document.documentElement.style.setProperty("--game-aspect", viewportAspect(logicalWidth));
+  const game = window.__birdddddd;
+  const pixelWidth = logicalWidth * RENDER_DENSITY;
+  const pixelHeight = VIEW_HEIGHT * RENDER_DENSITY;
+  if (game && (game.scale.gameSize.width !== pixelWidth || game.scale.gameSize.height !== pixelHeight)) {
+    game.scale.setGameSize(pixelWidth, pixelHeight);
+  }
+  return logicalWidth;
+}
+
 function setPortraitGate(blocked: boolean): void {
   document.documentElement.classList.toggle("mobile-portrait-gate", blocked);
   gameContent?.setAttribute("aria-hidden", String(blocked));
@@ -102,10 +116,11 @@ function startGame(): Promise<void> {
   gameLoadPromise = Promise.all([import("phaser"), import("./game/scene")])
     .then(([{ default: Phaser }, { AviaryScene }]) => {
       if (shouldGateForPortrait(viewportSignals()) || window.__birdddddd) return;
+      const logicalWidth = syncViewportSize();
       const config: Phaser.Types.Core.GameConfig = {
         type: Phaser.CANVAS,
         parent: "game",
-        width: VIEW_WIDTH * RENDER_DENSITY,
+        width: logicalWidth * RENDER_DENSITY,
         height: VIEW_HEIGHT * RENDER_DENSITY,
         backgroundColor: "#211a1d",
         pixelArt: true,
@@ -120,7 +135,7 @@ function startGame(): Promise<void> {
         scale: {
           mode: Phaser.Scale.FIT,
           autoCenter: Phaser.Scale.CENTER_BOTH,
-          width: VIEW_WIDTH * RENDER_DENSITY,
+          width: logicalWidth * RENDER_DENSITY,
           height: VIEW_HEIGHT * RENDER_DENSITY,
         },
         audio: {
@@ -144,6 +159,7 @@ function syncOrientationGate(): void {
     window.__birdddddd?.loop.sleep();
     return;
   }
+  syncViewportSize();
   if (window.__birdddddd) {
     window.__birdddddd.loop.wake();
     window.__birdddddd.scale.refresh();

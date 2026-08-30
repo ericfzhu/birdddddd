@@ -11,6 +11,9 @@ export interface LayeredParallaxState {
   near: ParallaxCrop;
 }
 
+const SOURCE_WIDTH = 512;
+const SOURCE_HEIGHT = 288;
+
 interface ParallaxRates {
   farX: number;
   farY: number;
@@ -57,11 +60,18 @@ const crop = (
   horizontalRate: number,
   verticalRate: number,
 ): ParallaxCrop => ({
-  x: Math.round(Math.min(512 - width, Math.max(0, distance * horizontalRate * motionScale))),
-  y: Math.round(Math.min(288 - height, Math.max(0, (288 - height) / 2 - cameraOffsetY * verticalRate * motionScale))),
+  x: Math.round(Math.min(SOURCE_WIDTH - width, Math.max(0, distance * horizontalRate * motionScale))),
+  y: Math.round(Math.min(SOURCE_HEIGHT - height, Math.max(0, (SOURCE_HEIGHT - height) / 2 - cameraOffsetY * verticalRate * motionScale))),
   width,
   height,
 });
+
+function responsiveCropSize(baseWidth: number, baseHeight: number, viewportWidth: number): { width: number; height: number } {
+  const aspect = viewportWidth / 180;
+  const width = Math.min(SOURCE_WIDTH, Math.round(baseHeight * aspect));
+  const height = Math.min(baseHeight, Math.round(width / aspect));
+  return { width: Math.max(baseWidth, width), height };
+}
 
 /** Crop windows for the authored far, midground, and near plates of any biome. */
 export function biomeParallaxState(
@@ -69,13 +79,17 @@ export function biomeParallaxState(
   distance: number,
   cameraOffsetY: number,
   reducedMotion: boolean,
+  viewportWidth = 320,
 ): LayeredParallaxState {
   const rates = PARALLAX_RATES[chapter] ?? PARALLAX_RATES[0]!;
   const motionScale = reducedMotion ? 0.35 : 1;
+  const far = responsiveCropSize(448, 252, viewportWidth);
+  const mid = responsiveCropSize(416, 234, viewportWidth);
+  const near = responsiveCropSize(384, 216, viewportWidth);
   return {
-    far: crop(distance, cameraOffsetY, motionScale, 448, 252, rates.farX, rates.farY),
-    mid: crop(distance, cameraOffsetY, motionScale, 416, 234, rates.midX, rates.midY),
-    near: crop(distance, cameraOffsetY, motionScale, 384, 216, rates.nearX, rates.nearY),
+    far: crop(distance, cameraOffsetY, motionScale, far.width, far.height, rates.farX, rates.farY),
+    mid: crop(distance, cameraOffsetY, motionScale, mid.width, mid.height, rates.midX, rates.midY),
+    near: crop(distance, cameraOffsetY, motionScale, near.width, near.height, rates.nearX, rates.nearY),
   };
 }
 

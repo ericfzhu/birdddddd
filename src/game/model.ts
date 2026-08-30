@@ -5,6 +5,7 @@ import {
   FLIP_DEBOUNCE_SECONDS,
   GRAVITY_ACCELERATION,
   HITBOX_INSET,
+  MAX_VIEW_WIDTH,
   MAX_VERTICAL_SPEED,
   PLAY_BOTTOM,
   PLAY_TOP,
@@ -74,17 +75,24 @@ export class GameModel {
   private pendingTransition?: { from: number; to: number };
   private parallaxTransitionId = "";
   private outgoingChapterDistance = 0;
+  private viewportWidth: number;
   private defeatedHazards = new WeakMap<ActiveChunk, Set<number>>();
   private wingedShellStates = new WeakMap<ActiveChunk, Map<number, WingedShellRuntimeState>>();
 
-  constructor(seed = 0x51a7e, bestScore = 0, startingChapter = 0, startingChunkId?: string) {
+  constructor(seed = 0x51a7e, bestScore = 0, startingChapter = 0, startingChunkId?: string, viewportWidth = VIEW_WIDTH) {
     this.seed = seed >>> 0;
     this.rngState = this.seed;
     this.bestScore = bestScore;
     this.chapter = clamp(Math.floor(startingChapter), 0, CHAPTERS.length - 1);
     this.gates = CHAPTERS[this.chapter]?.at ?? 0;
     this.score = this.gates;
+    this.viewportWidth = clamp(viewportWidth, VIEW_WIDTH, MAX_VIEW_WIDTH);
     this.populateInitialChunks(startingChunkId);
+  }
+
+  setViewportWidth(width: number): void {
+    this.viewportWidth = clamp(width, VIEW_WIDTH, MAX_VIEW_WIDTH);
+    this.recycleChunks();
   }
 
   reset(nextSeed = (this.seed + 0x9e3779b9) >>> 0): void {
@@ -196,7 +204,7 @@ export class GameModel {
       for (const solid of active.definition.solids) {
         const x = origin + solid.x;
         const y = solid.y + tunnelOffsetAt(active.definition, solid.x + solid.w / 2);
-        if (x < VIEW_WIDTH + 20 && x + solid.w > -20) {
+        if (x < this.viewportWidth + 20 && x + solid.w > -20) {
           rects.push({
             ...solid,
             x,
@@ -215,7 +223,7 @@ export class GameModel {
         const motionDirectionX = state?.phase === "walking" ? (state.velocityX >= 0 ? 1 : -1) : this.motionDirectionX(hazard);
         const x = origin + hazard.x + motion.x;
         const tunnelOffset = tunnelOffsetAt(active.definition, hazard.x + motion.x + hazard.w / 2);
-        if (x < VIEW_WIDTH + 20 && x + hazard.w > -20) {
+        if (x < this.viewportWidth + 20 && x + hazard.w > -20) {
           rects.push({
             ...hazard,
             x,
@@ -240,7 +248,7 @@ export class GameModel {
       const origin = active.startX - this.distance;
       for (const feather of active.feathers) {
         const x = origin + feather.x;
-        if (!feather.collected && x > -12 && x < VIEW_WIDTH + 12) {
+        if (!feather.collected && x > -12 && x < this.viewportWidth + 12) {
           feathers.push({ x, y: feather.y + tunnelOffsetAt(active.definition, feather.x), collected: false });
         }
       }
@@ -250,7 +258,7 @@ export class GameModel {
 
   visibleTunnelPoints(step = 4): VisibleTunnelPoint[] {
     const points: VisibleTunnelPoint[] = [];
-    for (let x = -step; x <= VIEW_WIDTH + step; x += step) {
+    for (let x = -step; x <= this.viewportWidth + step; x += step) {
       const offset = this.terrainOffsetAtWorldX(this.distance + x);
       points.push({ x, ceiling: PLAY_TOP + offset, floor: PLAY_BOTTOM + offset });
     }
@@ -320,7 +328,8 @@ export class GameModel {
     const visibleHazards = visibleRects.filter((rect) => rect.kind !== "solid").slice(0, 8);
     const visibleSolids = visibleRects.filter((rect) => rect.kind === "solid").slice(0, 8);
     return JSON.stringify({
-      coordinateSystem: "origin top-left; x increases right; y increases down; logical viewport 320x180",
+      coordinateSystem: `origin top-left; x increases right; y increases down; logical viewport ${this.viewportWidth}x180`,
+      viewport: { width: this.viewportWidth, height: 180 },
       mode: this.mode,
       player: {
         x: Number(this.playerX.toFixed(2)),
@@ -695,8 +704,8 @@ export class GameModel {
     this.chunks = this.chunks.filter((active) => active.startX + active.definition.width - this.distance > -40);
     let rightEdge = this.chunks.length > 0
       ? Math.max(...this.chunks.map((active) => active.startX + active.definition.width))
-      : this.distance + VIEW_WIDTH;
-    while (rightEdge - this.distance < VIEW_WIDTH + 360) {
+      : this.distance + this.viewportWidth;
+    while (rightEdge - this.distance < this.viewportWidth + 360) {
       const previous = this.chunks.at(-1)?.definition;
       const definition = this.pendingTransition
         ? transitionChunk(this.pendingTransition.from, this.pendingTransition.to)
@@ -713,7 +722,7 @@ export class GameModel {
   }
 
   private pruneUnseenQueue(): void {
-    this.chunks = this.chunks.filter((active) => active.startX - this.distance <= VIEW_WIDTH + 32);
+    this.chunks = this.chunks.filter((active) => active.startX - this.distance <= this.viewportWidth + 32);
     this.lastChunkId = this.chunks.at(-1)?.definition.id ?? "";
   }
 
