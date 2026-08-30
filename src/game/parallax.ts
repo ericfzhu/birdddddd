@@ -66,11 +66,14 @@ const crop = (
   height,
 });
 
-function responsiveCropSize(baseWidth: number, baseHeight: number, viewportWidth: number): { width: number; height: number } {
-  const aspect = viewportWidth / 180;
-  const width = Math.min(SOURCE_WIDTH, Math.round(baseHeight * aspect));
-  const height = Math.min(baseHeight, Math.round(width / aspect));
-  return { width: Math.max(baseWidth, width), height };
+function responsiveCropSize(baseWidth: number, baseHeight: number, viewportWidth: number, viewportHeight: number): { width: number; height: number } {
+  const aspect = viewportWidth / viewportHeight;
+  if (aspect >= baseWidth / baseHeight) {
+    const width = Math.min(SOURCE_WIDTH, Math.round(baseHeight * aspect));
+    return { width, height: Math.round(width / aspect) };
+  }
+  const height = Math.min(SOURCE_HEIGHT, Math.round(baseWidth / aspect));
+  return { width: Math.round(height * aspect), height };
 }
 
 /** Crop windows for the authored far, midground, and near plates of any biome. */
@@ -80,12 +83,13 @@ export function biomeParallaxState(
   cameraOffsetY: number,
   reducedMotion: boolean,
   viewportWidth = 320,
+  viewportHeight = 180,
 ): LayeredParallaxState {
   const rates = PARALLAX_RATES[chapter] ?? PARALLAX_RATES[0]!;
   const motionScale = reducedMotion ? 0.35 : 1;
-  const far = responsiveCropSize(448, 252, viewportWidth);
-  const mid = responsiveCropSize(416, 234, viewportWidth);
-  const near = responsiveCropSize(384, 216, viewportWidth);
+  const far = responsiveCropSize(448, 252, viewportWidth, viewportHeight);
+  const mid = responsiveCropSize(416, 234, viewportWidth, viewportHeight);
+  const near = responsiveCropSize(384, 216, viewportWidth, viewportHeight);
   return {
     far: crop(distance, cameraOffsetY, motionScale, far.width, far.height, rates.farX, rates.farY),
     mid: crop(distance, cameraOffsetY, motionScale, mid.width, mid.height, rates.midX, rates.midY),

@@ -36,7 +36,7 @@ import {
   transitionArtFor,
 } from "../src/game/interactive-art";
 import type { ActiveChunk, ChunkDefinition } from "../src/game/types";
-import { logicalViewportWidth } from "../src/viewport";
+import { logicalViewportSize, logicalViewportWidth } from "../src/viewport";
 
 const safeChunk = (feathers: Array<{ x: number; y: number }> = []): ChunkDefinition => ({
   id: "test-safe",
@@ -63,6 +63,17 @@ describe("birdddddd model", () => {
     expect(logicalViewportWidth(844, 390)).toBe(390);
     expect(logicalViewportWidth(2560, 1080)).toBe(420);
     expect(logicalViewportWidth(1024, 768)).toBe(320);
+  });
+
+  it("expands the vertical view on squarer displays without changing corridor physics", () => {
+    expect(logicalViewportSize(1280, 720)).toEqual({ width: 320, height: 180 });
+    expect(logicalViewportSize(1024, 768)).toEqual({ width: 320, height: 240 });
+    expect(logicalViewportSize(1716, 1303)).toEqual({ width: 320, height: 242 });
+    expect(logicalViewportSize(800, 800)).toEqual({ width: 320, height: 256 });
+
+    const model = new GameModel(121, 0, 0, undefined, 320, 242);
+    expect(JSON.parse(model.textSnapshot()).viewport).toEqual({ width: 320, height: 242 });
+    expect(model.playerY).toBe(PLAY_BOTTOM - PLAYER_HEIGHT / 2);
   });
 
   it("uses the expanded width for visibility and generated lookahead", () => {
@@ -888,6 +899,19 @@ describe("birdddddd model", () => {
     expect(wide.near.width).toBeGreaterThan(standard.near.width);
     for (const layer of [wide.far, wide.mid, wide.near]) {
       expect(layer.width / layer.height).toBeCloseTo(390 / 180, 2);
+      expect(layer.width).toBeLessThanOrEqual(512);
+      expect(layer.height).toBeLessThanOrEqual(288);
+    }
+  });
+
+  it("reveals more vertical parallax art on a 4:3 viewport", () => {
+    const standard = biomeParallaxState(0, 0, 0, false, 320, 180);
+    const square = biomeParallaxState(0, 0, 0, false, 320, 240);
+    expect(square.far.height).toBeGreaterThan(standard.far.height);
+    expect(square.mid.height).toBeGreaterThan(standard.mid.height);
+    expect(square.near.height).toBeGreaterThan(standard.near.height);
+    for (const layer of [square.far, square.mid, square.near]) {
+      expect(layer.width / layer.height).toBeCloseTo(320 / 240, 2);
       expect(layer.width).toBeLessThanOrEqual(512);
       expect(layer.height).toBeLessThanOrEqual(288);
     }

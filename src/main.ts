@@ -1,6 +1,6 @@
 import { RENDER_DENSITY, VIEW_HEIGHT } from "./game/constants";
 import { shouldGateForPortrait, type MobileViewportSignals } from "./mobile";
-import { logicalViewportWidth, viewportAspect } from "./viewport";
+import { logicalViewportSize, viewportAspect, type LogicalViewportSize } from "./viewport";
 import "./styles.css";
 
 function waitForGameReady(): Promise<void> {
@@ -91,17 +91,33 @@ function viewportSignals(): MobileViewportSignals {
   };
 }
 
-function syncViewportSize(): number {
+function syncViewportCss(viewport: LogicalViewportSize): void {
+  const offsetY = (viewport.height - VIEW_HEIGHT) / 2;
+  const root = document.documentElement.style;
+  root.setProperty("--game-aspect", viewportAspect(viewport));
+  root.setProperty("--hud-control-top", `${((offsetY + 17) / viewport.height) * 100}%`);
+  root.setProperty("--hud-control-width", `${(30 / viewport.width) * 100}%`);
+  root.setProperty("--hud-control-height", `${(20 / viewport.height) * 100}%`);
+  root.setProperty("--hud-pause-right", `${(42 / viewport.width) * 100}%`);
+  root.setProperty("--hud-sound-right", `${(6 / viewport.width) * 100}%`);
+  root.setProperty("--hud-title-size", `${(18 / viewport.height) * 100}cqh`);
+  root.setProperty("--hud-prompt-size", `${(9 / viewport.height) * 100}cqh`);
+  root.setProperty("--hud-score-size", `${(15 / viewport.height) * 100}cqh`);
+  root.setProperty("--hud-small-size", `${(8 / viewport.height) * 100}cqh`);
+  root.setProperty("--hud-result-size", `${(16 / viewport.height) * 100}cqh`);
+}
+
+function syncViewportSize(): LogicalViewportSize {
   const signals = viewportSignals();
-  const logicalWidth = logicalViewportWidth(signals.width, signals.height);
-  document.documentElement.style.setProperty("--game-aspect", viewportAspect(logicalWidth));
+  const viewport = logicalViewportSize(signals.width, signals.height);
+  syncViewportCss(viewport);
   const game = window.__birdddddd;
-  const pixelWidth = logicalWidth * RENDER_DENSITY;
-  const pixelHeight = VIEW_HEIGHT * RENDER_DENSITY;
+  const pixelWidth = viewport.width * RENDER_DENSITY;
+  const pixelHeight = viewport.height * RENDER_DENSITY;
   if (game && (game.scale.gameSize.width !== pixelWidth || game.scale.gameSize.height !== pixelHeight)) {
     game.scale.setGameSize(pixelWidth, pixelHeight);
   }
-  return logicalWidth;
+  return viewport;
 }
 
 function setPortraitGate(blocked: boolean): void {
@@ -116,12 +132,12 @@ function startGame(): Promise<void> {
   gameLoadPromise = Promise.all([import("phaser"), import("./game/scene")])
     .then(([{ default: Phaser }, { AviaryScene }]) => {
       if (shouldGateForPortrait(viewportSignals()) || window.__birdddddd) return;
-      const logicalWidth = syncViewportSize();
+      const viewport = syncViewportSize();
       const config: Phaser.Types.Core.GameConfig = {
         type: Phaser.CANVAS,
         parent: "game",
-        width: logicalWidth * RENDER_DENSITY,
-        height: VIEW_HEIGHT * RENDER_DENSITY,
+        width: viewport.width * RENDER_DENSITY,
+        height: viewport.height * RENDER_DENSITY,
         backgroundColor: "#211a1d",
         pixelArt: true,
         roundPixels: true,
@@ -135,8 +151,8 @@ function startGame(): Promise<void> {
         scale: {
           mode: Phaser.Scale.FIT,
           autoCenter: Phaser.Scale.CENTER_BOTH,
-          width: logicalWidth * RENDER_DENSITY,
-          height: VIEW_HEIGHT * RENDER_DENSITY,
+          width: viewport.width * RENDER_DENSITY,
+          height: viewport.height * RENDER_DENSITY,
         },
         audio: {
           disableWebAudio: false,

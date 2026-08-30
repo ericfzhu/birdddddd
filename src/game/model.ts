@@ -5,6 +5,7 @@ import {
   FLIP_DEBOUNCE_SECONDS,
   GRAVITY_ACCELERATION,
   HITBOX_INSET,
+  MAX_VIEW_HEIGHT,
   MAX_VIEW_WIDTH,
   MAX_VERTICAL_SPEED,
   PLAY_BOTTOM,
@@ -18,6 +19,7 @@ import {
   SANDJET_NOZZLE_DEPTH,
   TERRAIN_SPIKE_COLLISION_RATIO,
   WALKER_STOMP_BOUNCE_SPEED,
+  VIEW_HEIGHT,
   VIEW_WIDTH,
   chapterForGates,
 } from "./constants";
@@ -76,10 +78,11 @@ export class GameModel {
   private parallaxTransitionId = "";
   private outgoingChapterDistance = 0;
   private viewportWidth: number;
+  private viewportHeight: number;
   private defeatedHazards = new WeakMap<ActiveChunk, Set<number>>();
   private wingedShellStates = new WeakMap<ActiveChunk, Map<number, WingedShellRuntimeState>>();
 
-  constructor(seed = 0x51a7e, bestScore = 0, startingChapter = 0, startingChunkId?: string, viewportWidth = VIEW_WIDTH) {
+  constructor(seed = 0x51a7e, bestScore = 0, startingChapter = 0, startingChunkId?: string, viewportWidth = VIEW_WIDTH, viewportHeight = VIEW_HEIGHT) {
     this.seed = seed >>> 0;
     this.rngState = this.seed;
     this.bestScore = bestScore;
@@ -87,11 +90,17 @@ export class GameModel {
     this.gates = CHAPTERS[this.chapter]?.at ?? 0;
     this.score = this.gates;
     this.viewportWidth = clamp(viewportWidth, VIEW_WIDTH, MAX_VIEW_WIDTH);
+    this.viewportHeight = clamp(viewportHeight, VIEW_HEIGHT, MAX_VIEW_HEIGHT);
     this.populateInitialChunks(startingChunkId);
   }
 
   setViewportWidth(width: number): void {
+    this.setViewportSize(width, this.viewportHeight);
+  }
+
+  setViewportSize(width: number, height: number): void {
     this.viewportWidth = clamp(width, VIEW_WIDTH, MAX_VIEW_WIDTH);
+    this.viewportHeight = clamp(height, VIEW_HEIGHT, MAX_VIEW_HEIGHT);
     this.recycleChunks();
   }
 
@@ -328,8 +337,8 @@ export class GameModel {
     const visibleHazards = visibleRects.filter((rect) => rect.kind !== "solid").slice(0, 8);
     const visibleSolids = visibleRects.filter((rect) => rect.kind === "solid").slice(0, 8);
     return JSON.stringify({
-      coordinateSystem: `origin top-left; x increases right; y increases down; logical viewport ${this.viewportWidth}x180`,
-      viewport: { width: this.viewportWidth, height: 180 },
+      coordinateSystem: `origin top-left; x increases right; y increases down; logical viewport ${this.viewportWidth}x${this.viewportHeight}`,
+      viewport: { width: this.viewportWidth, height: this.viewportHeight },
       mode: this.mode,
       player: {
         x: Number(this.playerX.toFixed(2)),

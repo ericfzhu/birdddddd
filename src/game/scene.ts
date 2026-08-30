@@ -129,6 +129,8 @@ export class AviaryScene extends Phaser.Scene {
   private lastTransitionId = "";
   private particles: FeatherParticle[] = [];
   private viewportWidth = VIEW_WIDTH;
+  private viewportHeight = VIEW_HEIGHT;
+  private viewportOffsetY = 0;
 
   constructor() {
     super("aviary");
@@ -168,6 +170,8 @@ export class AviaryScene extends Phaser.Scene {
 
   create(): void {
     this.viewportWidth = Math.round(this.scale.gameSize.width / RENDER_DENSITY);
+    this.viewportHeight = Math.round(this.scale.gameSize.height / RENDER_DENSITY);
+    this.viewportOffsetY = (this.viewportHeight - VIEW_HEIGHT) / 2;
     this.cameras.main.setOrigin(0, 0).setZoom(RENDER_DENSITY).setRoundPixels(true);
     const dangerColor = `#${DANGER_RED.toString(16).padStart(6, "0")}`;
     INTERACTIVE_ART.forEach((family, chapter) => {
@@ -195,6 +199,7 @@ export class AviaryScene extends Phaser.Scene {
       Number.isFinite(previewChapter) ? previewChapter : 0,
       requestedChunk,
       this.viewportWidth,
+      this.viewportHeight,
     );
     this.model.reducedMotion = this.settings.reducedMotion;
 
@@ -239,6 +244,7 @@ export class AviaryScene extends Phaser.Scene {
     this.chapterText = new HudText("hud-chapter", 49);
     this.resultText = new HudText("hud-result", 73);
     this.helperText = new HudText("hud-helper", 124);
+    this.syncHudViewport();
 
     this.audio = new AudioDirector(this, this.settings.muted);
     this.scale.on(Phaser.Scale.Events.RESIZE, this.handleViewportResize, this);
@@ -250,10 +256,20 @@ export class AviaryScene extends Phaser.Scene {
 
   private handleViewportResize(gameSize: Phaser.Structs.Size): void {
     const nextWidth = Math.round(gameSize.width / RENDER_DENSITY);
-    if (nextWidth === this.viewportWidth) return;
+    const nextHeight = Math.round(gameSize.height / RENDER_DENSITY);
+    if (nextWidth === this.viewportWidth && nextHeight === this.viewportHeight) return;
     this.viewportWidth = nextWidth;
-    this.model.setViewportWidth(nextWidth);
+    this.viewportHeight = nextHeight;
+    this.viewportOffsetY = (this.viewportHeight - VIEW_HEIGHT) / 2;
+    this.model.setViewportSize(nextWidth, nextHeight);
+    this.syncHudViewport();
     this.renderFrame();
+  }
+
+  private syncHudViewport(): void {
+    for (const text of [this.titleText, this.promptText, this.scoreText, this.chapterText, this.resultText, this.helperText]) {
+      text.setViewport(this.viewportHeight, this.viewportOffsetY);
+    }
   }
 
   private createSolidSilhouetteTexture(sourceKey: string, targetKey: string, color: string, padding: number): void {
@@ -329,7 +345,7 @@ export class AviaryScene extends Phaser.Scene {
     });
     this.input.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
       const x = pointer.worldX;
-      const y = pointer.worldY;
+      const y = pointer.worldY - this.viewportOffsetY;
       if (y <= 38 && x >= this.viewportWidth - 38) {
         this.toggleMute();
         return;
@@ -346,15 +362,19 @@ export class AviaryScene extends Phaser.Scene {
     window.render_game_to_text = () => {
       const snapshot = JSON.parse(this.model.textSnapshot()) as Record<string, unknown>;
       const player = snapshot.player as Record<string, unknown>;
-      player.screenY = Number((this.model.playerY + this.cameraOffsetY).toFixed(2));
+      player.screenY = Number((this.model.playerY + this.cameraOffsetY + this.viewportOffsetY).toFixed(2));
       const hazards = snapshot.hazards as Array<Record<string, unknown>>;
-      for (const hazard of hazards) hazard.screenY = Math.round(Number(hazard.y) + this.cameraOffsetY);
+      for (const hazard of hazards) hazard.screenY = Math.round(Number(hazard.y) + this.cameraOffsetY + this.viewportOffsetY);
       const feathers = snapshot.feathers as Array<Record<string, unknown>>;
-      for (const feather of feathers) feather.screenY = Math.round(Number(feather.y) + this.cameraOffsetY);
-      snapshot.camera = { offsetY: Number(this.cameraOffsetY.toFixed(2)), deadZone: [76, 104] };
+      for (const feather of feathers) feather.screenY = Math.round(Number(feather.y) + this.cameraOffsetY + this.viewportOffsetY);
+      snapshot.camera = {
+        offsetY: Number(this.cameraOffsetY.toFixed(2)),
+        viewportOffsetY: this.viewportOffsetY,
+        deadZone: [76 + this.viewportOffsetY, 104 + this.viewportOffsetY],
+      };
       snapshot.defeatedWalkers = this.defeatedWalkers.slice(0, 4).map((defeated) => ({
         x: Number(defeated.x.toFixed(2)),
-        y: Number((defeated.y + this.cameraOffsetY).toFixed(2)),
+        y: Number((defeated.y + this.cameraOffsetY + this.viewportOffsetY).toFixed(2)),
         rotation: Number(defeated.rotation.toFixed(2)),
       }));
       snapshot.settings = { muted: this.settings.muted, reducedMotion: this.settings.reducedMotion };
@@ -545,10 +565,10 @@ export class AviaryScene extends Phaser.Scene {
     const bg = this.background;
     bg.clear();
     bg.fillStyle(fromChapter.shade, 1);
-    bg.fillRect(0, 0, this.viewportWidth, VIEW_HEIGHT);
+    bg.fillRect(0, 0, this.viewportWidth, this.viewportHeight);
     if (to !== from && progress > 0) {
       bg.fillStyle(toChapter.shade, progress);
-      bg.fillRect(0, 0, this.viewportWidth, VIEW_HEIGHT);
+      bg.fillRect(0, 0, this.viewportWidth, this.viewportHeight);
     }
     for (const [chapter, image] of this.biomeBackgrounds.entries()) {
       let alpha = 0;
@@ -562,6 +582,7 @@ export class AviaryScene extends Phaser.Scene {
         this.cameraOffsetY,
         this.settings.reducedMotion,
         this.viewportWidth,
+        this.viewportHeight,
       );
       this.applyParallaxCrop(image, parallax.far);
     }
@@ -573,6 +594,7 @@ export class AviaryScene extends Phaser.Scene {
         this.cameraOffsetY,
         this.settings.reducedMotion,
         this.viewportWidth,
+        this.viewportHeight,
       );
       this.renderParallaxLayer(this.biomeMidgrounds[chapter]!, parallax.mid, alpha);
       this.renderParallaxLayer(this.biomeNears[chapter]!, parallax.near, alpha);
@@ -581,7 +603,7 @@ export class AviaryScene extends Phaser.Scene {
 
   private applyParallaxCrop(image: Phaser.GameObjects.Image, crop: ParallaxCrop): void {
     const scaleX = this.viewportWidth / crop.width;
-    const scaleY = VIEW_HEIGHT / crop.height;
+    const scaleY = this.viewportHeight / crop.height;
     image
       .setCrop(crop.x, crop.y, crop.width, crop.height)
       .setScale(scaleX, scaleY)
@@ -601,7 +623,7 @@ export class AviaryScene extends Phaser.Scene {
     const shakeX = this.shake > 0 ? Math.sin(this.uiTime * 120) * 1.4 : 0;
     const shakeY = this.shake > 0 ? Math.cos(this.uiTime * 90) * 1.1 : 0;
     const renderX = Math.round(shakeX);
-    const renderY = Math.round(shakeY + this.cameraOffsetY);
+    const renderY = Math.round(shakeY + this.cameraOffsetY + this.viewportOffsetY);
     this.renderDistance = snappedRenderDistance(this.model.distance);
     base.setPosition(renderX, renderY);
     this.terrainTiles.setPosition(renderX, renderY);
@@ -690,7 +712,7 @@ export class AviaryScene extends Phaser.Scene {
     const firstWorldColumn = Math.floor((this.model.distance - tileSize) / tileSize);
     const lastWorldColumn = Math.ceil((this.model.distance + this.viewportWidth + tileSize) / tileSize);
     const visibleTop = -renderY - tileSize;
-    const visibleBottom = VIEW_HEIGHT - renderY + tileSize;
+    const visibleBottom = this.viewportHeight - renderY + tileSize;
     let poolIndex = 0;
     for (let worldColumn = firstWorldColumn; worldColumn <= lastWorldColumn; worldColumn += 1) {
       const worldX = worldColumn * tileSize;
@@ -1407,23 +1429,24 @@ export class AviaryScene extends Phaser.Scene {
     for (const particle of this.particles) {
       const alpha = Math.min(1, particle.life * 3);
       g.fillStyle(particle.color, alpha);
-      g.fillRect(Math.round(particle.x), Math.round(particle.y + this.cameraOffsetY), 2, 1);
+      g.fillRect(Math.round(particle.x), Math.round(particle.y + this.cameraOffsetY + this.viewportOffsetY), 2, 1);
     }
     for (const defeated of this.defeatedWalkers) {
       defeated.sprite
-        .setPosition(Math.round(defeated.x), Math.round(defeated.y + this.cameraOffsetY))
+        .setPosition(Math.round(defeated.x), Math.round(defeated.y + this.cameraOffsetY + this.viewportOffsetY))
         .setRotation(defeated.rotation);
     }
     if (this.pulse > 0) {
       const max = this.settings.reducedMotion ? 0.04 : 0.2;
       g.fillStyle(COLORS.cream, (this.pulse / max) * 0.08);
-      g.fillRect(0, 0, this.viewportWidth, VIEW_HEIGHT);
+      g.fillRect(0, 0, this.viewportWidth, this.viewportHeight);
     }
   }
 
   private renderUi(): void {
     const g = this.ui;
     g.clear();
+    g.setPosition(0, this.viewportOffsetY);
     const mode = this.model.mode;
     const revealDeathPanel = mode === "dead" && this.model.deathTimer >= 0.24;
     const centerOffset = this.viewportWidth / 2 - VIEW_WIDTH / 2;

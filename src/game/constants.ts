@@ -1,6 +1,7 @@
 export const VIEW_WIDTH = 320;
 export const MAX_VIEW_WIDTH = 420;
 export const VIEW_HEIGHT = 180;
+export const MAX_VIEW_HEIGHT = 256;
 export const RENDER_DENSITY = 2;
 export const PLAY_TOP = 16;
 export const PLAY_BOTTOM = 164;

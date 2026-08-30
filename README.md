@@ -12,7 +12,7 @@ A one-button endless arcade game combining Flappy Bird's rapid obstacle loop wit
 
 The game is designed for landscape screens. On phone-sized touch devices held in portrait, only the orientation screen loads. Phaser initializes after the phone is turned sideways; returning to portrait suspends the current run until landscape is restored.
 
-In landscape, the game host fills the browser viewport by default. The playfield keeps its authored 180-pixel logical height and expands from 320 to at most 420 logical pixels wide on wider displays, revealing more of the level without changing physics or stretching the artwork. Narrower displays retain the original 16:9 composition. Browser-native fullscreen is still available with **F**.
+In landscape, the game host fills the browser viewport by default. The authored 320×180 playfield remains the gameplay baseline: wider displays reveal up to 420 logical pixels horizontally, while squarer displays reveal up to 256 logical pixels vertically. Collision geometry stays in the centered baseline corridor, and the additional view shows more authored scenery and terrain depth without stretching. Browser-native fullscreen is still available with **F**.
 
 ## Install and offline play
 
@@ -67,7 +67,7 @@ No cross-origin API or CORS permission is required for the iframe. Best score, m
 
 - Phaser 4.2 rendering, input, scaling, and a Phaser-owned Web Audio context
 - TypeScript and Vite static production build
-- Expandable 320–420×180 logical canvas with nearest-neighbour responsive scaling
+- Expandable 320–420×180–256 logical canvas with nearest-neighbour responsive scaling
 - Deterministic 60 Hz custom physics with momentum-preserving gravity flips
 - Sixty authored chunks across ten escalating chapters
 - Ten continuous tile-world biomes: Verdant Wilds, Underground Jungle, Mushroom Kingdom, Sunken Dunes, Marble Cave, Violet Chasm, Underground Corruption, Abandoned Minecart, Ashen Depths, and Underworld

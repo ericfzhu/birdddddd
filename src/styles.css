@@ -8,6 +8,16 @@
 
 :root {
   --game-aspect: 1.7777778;
+  --hud-control-top: 9.4444%;
+  --hud-control-width: 9.375%;
+  --hud-control-height: 11.1111%;
+  --hud-pause-right: 13.125%;
+  --hud-sound-right: 1.875%;
+  --hud-title-size: 10cqh;
+  --hud-prompt-size: 5cqh;
+  --hud-score-size: 8.3333cqh;
+  --hud-small-size: 4.4444cqh;
+  --hud-result-size: 8.8889cqh;
   color-scheme: dark;
   font-family: ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, monospace;
   background: #211a1d;
@@ -98,9 +108,9 @@ canvas {
 
 .hud-control {
   position: absolute;
-  top: 9.4444%;
-  width: 16.6667cqh;
-  height: 11.1111%;
+  top: var(--hud-control-top);
+  width: var(--hud-control-width);
+  height: var(--hud-control-height);
   margin: 0;
   padding: 0;
   border: 0;
@@ -124,11 +134,11 @@ canvas {
 }
 
 .hud-control-pause {
-  right: 23.3333cqh;
+  right: var(--hud-pause-right);
 }
 
 .hud-control-sound {
-  right: 3.3333cqh;
+  right: var(--hud-sound-right);
 }
 
 .hud-control-icon {
@@ -196,28 +206,28 @@ canvas {
 .hud-title {
   color: #fff9e9;
   font-family: "Pixelify Sans", ui-monospace, monospace;
-  font-size: 10cqh;
+  font-size: var(--hud-title-size);
   font-weight: 700;
   letter-spacing: 0.035em;
 }
 
 .hud-prompt {
   font-family: "Pixelify Sans", ui-monospace, monospace;
-  font-size: 5cqh;
+  font-size: var(--hud-prompt-size);
   font-weight: 600;
   letter-spacing: 0.06em;
 }
 
 .hud-score {
   color: #fff9e9;
-  font-size: 8.3333cqh;
+  font-size: var(--hud-score-size);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
 
 .hud-chapter,
 .hud-helper {
-  font-size: 4.4444cqh;
+  font-size: var(--hud-small-size);
 }
 
 .hud-chapter {
@@ -226,7 +236,7 @@ canvas {
 
 .hud-result {
   color: #fff9e9;
-  font-size: 8.8889cqh;
+  font-size: var(--hud-result-size);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
